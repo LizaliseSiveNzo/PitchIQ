@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-// Branded login/register + demo entry + master login. Real Supabase auth lands in Phase 1.
+// Real Supabase auth + master login (123/123) + role demo entry.
 
 const ROLES = ['Admin', 'Coach', 'Parent', 'Player'];
-// Master login for exploring the full app without a real account.
 const MASTER = { email: '123', password: '123', role: 'admin' };
 
 export default function Login() {
   const [mode, setMode] = useState('login'); // login | register
   const [role, setRole] = useState('Admin');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [childCode, setChildCode] = useState('');
   const [error, setError] = useState('');
-  const { demoLogin } = useAuth();
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { signIn, signUp, demoLogin } = useAuth();
   const navigate = useNavigate();
 
   function enterDemo(r) {
@@ -21,18 +24,40 @@ export default function Login() {
     navigate(r === 'player' ? '/player' : `/${r}`);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
-    if (mode === 'login') {
-      if (email.trim() === MASTER.email && password === MASTER.password) {
-        demoLogin(MASTER.role);          // master → full admin view
-        navigate('/admin');
-        return;
-      }
-      setError('Invalid credentials. Tip: use 123 / 123 for the master login.');
+    setError(''); setNotice('');
+
+    // Master shortcut
+    if (mode === 'login' && email.trim() === MASTER.email && password === MASTER.password) {
+      demoLogin(MASTER.role);
+      navigate('/admin');
+      return;
     }
-    // register is not wired yet (Phase 1)
+
+    setBusy(true);
+    try {
+      if (mode === 'login') {
+        const { error, role: r } = await signIn({ email: email.trim(), password });
+        if (error) { setError(error); return; }
+        navigate(`/${r}`);
+      } else {
+        const { error, needsConfirmation } = await signUp({
+          name, email: email.trim(), password,
+          role: role.toLowerCase(),
+          childCode: childCode.trim(),
+        });
+        if (error) { setError(error); return; }
+        if (needsConfirmation) {
+          setNotice('Account created. Check your email to confirm, then sign in.');
+          setMode('login');
+        } else {
+          navigate(`/${role.toLowerCase()}`);
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -61,7 +86,7 @@ export default function Login() {
               <label className="label">I am a…</label>
               <div className="segmented" role="tablist">
                 {ROLES.map((r) => (
-                  <button key={r} aria-selected={role === r} onClick={() => setRole(r)}>{r}</button>
+                  <button key={r} type="button" aria-selected={role === r} onClick={() => setRole(r)}>{r}</button>
                 ))}
               </div>
             </div>
@@ -71,7 +96,7 @@ export default function Login() {
             {mode === 'register' && (
               <div className="field">
                 <label className="label">Full name</label>
-                <input className="input" placeholder="Your name" />
+                <input className="input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
             )}
             <div className="field">
@@ -88,16 +113,16 @@ export default function Login() {
             {mode === 'register' && role === 'Parent' && (
               <div className="field">
                 <label className="label">Child code</label>
-                <input className="input" placeholder="Code from your academy" />
+                <input className="input" placeholder="Code from your academy"
+                  value={childCode} onChange={(e) => setChildCode(e.target.value)} />
               </div>
             )}
 
-            {error && (
-              <p style={{ color: 'var(--danger)', fontSize: 13, margin: '0 0 12px' }}>{error}</p>
-            )}
+            {error &&  <p style={{ color: 'var(--danger)', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
+            {notice && <p style={{ color: 'var(--green-700)', fontSize: 13, margin: '0 0 12px' }}>{notice}</p>}
 
-            <button className="btn btn-primary btn-lg btn-block" type="submit">
-              {mode === 'login' ? 'Sign in' : 'Create account'}
+            <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={busy}>
+              {busy ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Create account')}
             </button>
           </form>
 
@@ -107,7 +132,6 @@ export default function Login() {
             </div>
           )}
 
-          {/* Demo entry — explore each role directly */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 14px' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
             <span className="subtle" style={{ fontSize: 12 }}>Or jump into a role</span>
@@ -122,7 +146,7 @@ export default function Login() {
 
           <p className="subtle" style={{ textAlign: 'center', marginTop: 18 }}>
             {mode === 'login' ? "Don't have an account? " : 'Already have one? '}
-            <a onClick={() => setMode(mode === 'login' ? 'register' : 'login')} style={{ cursor: 'pointer' }}>
+            <a onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setNotice(''); }} style={{ cursor: 'pointer' }}>
               {mode === 'login' ? 'Register' : 'Sign in'}
             </a>
           </p>
