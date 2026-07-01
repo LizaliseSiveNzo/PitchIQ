@@ -11,16 +11,36 @@ const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').
 
 const DEMO = { name: 'Thabo Mokoena', position: 'Winger', team: 'U15', rank: 'Elite', progress: 62,
   attendance_pct: 92, minutes: 840, avg_rating: 4.4 };
+const DEMO_SUMMARY = "Thabo's pace on the wing is creating real chances — three assists this month. Focus area: tracking back on defence. Home tip: 10 minutes of shuttle runs, 3× a week.";
 
 export default function PlayerProfile() {
   const { session } = useAuth();
   const [ov, setOv] = useState(session?.demo ? DEMO : null);
   const [loading, setLoading] = useState(!session?.demo);
 
+  const [ai, setAi] = useState(session?.demo ? DEMO_SUMMARY : '');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiErr, setAiErr] = useState('');
+
   useEffect(() => {
     if (session?.demo) return;
     supabase.rpc('my_player_overview').then(({ data }) => { setOv(data); setLoading(false); });
   }, []);
+
+  async function generate() {
+    if (session?.demo) return;
+    setAiBusy(true); setAiErr(''); setAi('');
+    try {
+      const { data, error } = await supabase.functions.invoke('player-summary', { body: {} });
+      if (error) {
+        let msg = error.message;
+        try { const b = await error.context.json(); if (b?.error) msg = b.error; } catch (_e) {}
+        setAiErr(msg); return;
+      }
+      setAi(data?.summary || 'No summary returned.');
+    } catch (e) { setAiErr(String(e)); }
+    finally { setAiBusy(false); }
+  }
 
   if (loading) return <AppShell role="player" active="My Profile" title="My Profile"><div className="card">Loading…</div></AppShell>;
   if (!ov) return (
@@ -70,11 +90,15 @@ export default function PlayerProfile() {
               <strong style={{ color: 'var(--green-700)', fontSize: 13, letterSpacing: '.04em', textTransform: 'uppercase' }}>
                 AI Summary — Last 30 Days
               </strong>
-              <button className="btn btn-secondary" style={{ minHeight: 32, padding: '6px 12px' }} disabled>Regenerate</button>
+              <button className="btn btn-secondary" style={{ minHeight: 32, padding: '6px 12px' }}
+                onClick={generate} disabled={aiBusy || session?.demo}>
+                {aiBusy ? 'Generating…' : (ai ? 'Regenerate' : 'Generate')}
+              </button>
             </div>
-            <p style={{ margin: '10px 0 0' }} className="subtle">
-              AI performance summaries arrive in Phase 7 (Claude API).
-            </p>
+            {aiErr && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '10px 0 0' }}>{aiErr}</p>}
+            {ai
+              ? <p style={{ margin: '10px 0 0' }}>{ai}</p>
+              : !aiErr && <p className="subtle" style={{ margin: '10px 0 0' }}>Tap Generate for an AI performance summary powered by Claude.</p>}
           </div>
         </div>
       </div>
