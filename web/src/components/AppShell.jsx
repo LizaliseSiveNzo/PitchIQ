@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient.js';
 
 // [label, icon, path|null]
 const NAV = {
-  admin:  [['Dashboard','▚','/admin'],['Teams','👥','/admin/teams'],['Players','⚽','/admin/players'],['Trials','📋',null],['Reports','📊',null],['Settings','⚙',null]],
+  admin:  [['Dashboard','▚','/admin'],['Teams','👥','/admin/teams'],['Players','⚽','/admin/players'],['Trials','📋','/admin/trials'],['Reports','📊',null],['Settings','⚙',null]],
   coach:  [['Dashboard','▚','/coach'],['Log Training','➕','/coach/training'],['Log Match','⚽','/coach/match'],['Schedule','📅','/coach/schedule'],['Messages','💬',null]],
   parent: [['My Child','⚽','/parent'],['Schedule','📅','/schedule'],['Notifications','🔔','/notifications'],['Messages','💬',null]],
   player: [['My Profile','⚽','/player'],['Leaderboard','🏆',null],['Schedule','📅','/schedule']],
