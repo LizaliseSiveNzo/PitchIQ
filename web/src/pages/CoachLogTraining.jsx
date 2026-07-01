@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -7,34 +6,42 @@ import { myTeams, teamPlayers } from '../lib/coach.js';
 
 export default function CoachLogTraining() {
   const { profile, session } = useAuth();
-  const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
   const [teamId, setTeamId] = useState('');
+  const [sessions, setSessions] = useState([]);   // scheduled practices
+  const [sessionSel, setSessionSel] = useState('new');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
   const [players, setPlayers] = useState([]);
   const [present, setPresent] = useState({});
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const [ok, setOk] = useState('');
+  const [err, setErr] = useState(''); const [ok, setOk] = useState('');
 
   useEffect(() => { if (session?.demo) return; (async () => {
     const t = await myTeams(profile.id); setTeams(t); if (t[0]) setTeamId(t[0].id);
   })(); }, []);
-  useEffect(() => { if (teamId) (async () => {
+
+  useEffect(() => { if (!teamId) return; (async () => {
     const p = await teamPlayers(teamId); setPlayers(p);
     setPresent(Object.fromEntries(p.map((x) => [x.id, true])));
+    const { data } = await supabase.from('training_sessions').select('id,starts_at,location,notes')
+      .eq('team_id', teamId).not('starts_at', 'is', null).order('starts_at', { ascending: false }).limit(10);
+    setSessions(data || []); setSessionSel('new');
   })(); }, [teamId]);
 
   async function save(e) {
     e.preventDefault(); setErr(''); setOk(''); setBusy(true);
     try {
-      const { data: ts, error } = await supabase.from('training_sessions')
-        .insert({ team_id: teamId, coach_id: profile.id, date, notes }).select().single();
-      if (error) { setErr(error.message); return; }
-      const rows = players.map((p) => ({ session_id: ts.id, player_id: p.id, attended: !!present[p.id] }));
+      let sid = sessionSel;
+      if (sessionSel === 'new') {
+        const { data: ts, error } = await supabase.from('training_sessions')
+          .insert({ team_id: teamId, coach_id: profile.id, date, notes }).select().single();
+        if (error) { setErr(error.message); return; }
+        sid = ts.id;
+      }
+      const rows = players.map((p) => ({ session_id: sid, player_id: p.id, attended: !!present[p.id] }));
       if (rows.length) {
-        const { error: e2 } = await supabase.from('attendance').insert(rows);
+        const { error: e2 } = await supabase.from('attendance').upsert(rows, { onConflict: 'session_id,player_id' });
         if (e2) { setErr(e2.message); return; }
       }
       await supabase.rpc('recompute_team_ranks', { p_team: teamId });
@@ -54,9 +61,17 @@ export default function CoachLogTraining() {
             <div className="field"><label className="label">Team</label>
               <select className="select" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
                 {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+            <div className="field"><label className="label">Session</label>
+              <select className="select" value={sessionSel} onChange={(e) => setSessionSel(e.target.value)}>
+                <option value="new">New session</option>
+                {sessions.map((s) => <option key={s.id} value={s.id}>
+                  {new Date(s.starts_at).toLocaleDateString()} — {s.notes || 'Practice'}</option>)}
+              </select></div>
+          </div>
+          {sessionSel === 'new' && (
             <div className="field"><label className="label">Date</label>
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-          </div>
+          )}
 
           <h4 style={{ marginTop: 8 }}>Attendance</h4>
           <div className="stack" style={{ gap: 8 }}>
@@ -72,12 +87,14 @@ export default function CoachLogTraining() {
             {players.length === 0 && <p className="subtle">No players on this team yet.</p>}
           </div>
 
-          <div className="field" style={{ marginTop: 12 }}><label className="label">Session note (optional)</label>
-            <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+          {sessionSel === 'new' && (
+            <div className="field" style={{ marginTop: 12 }}><label className="label">Session note (optional)</label>
+              <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+          )}
 
           {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</p>}
           {ok &&  <p style={{ color: 'var(--green-700)', fontSize: 13 }}>{ok}</p>}
-          <button className="btn btn-primary btn-lg btn-block" disabled={busy || !players.length}>{busy ? 'Saving…' : 'Save session'}</button>
+          <button className="btn btn-primary btn-lg btn-block" disabled={busy || !players.length}>{busy ? 'Saving…' : 'Save attendance'}</button>
         </form>
       </div>
     </AppShell>

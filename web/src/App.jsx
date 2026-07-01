@@ -6,6 +6,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminTeams from './pages/AdminTeams.jsx';
 import AdminPlayers from './pages/AdminPlayers.jsx';
 import AdminTrials from './pages/AdminTrials.jsx';
+import AdminSettings from './pages/AdminSettings.jsx';
 import CoachDashboard from './pages/CoachDashboard.jsx';
 import CoachLogTraining from './pages/CoachLogTraining.jsx';
 import CoachLogMatch from './pages/CoachLogMatch.jsx';
@@ -28,7 +29,8 @@ export default function App() {
       <Route path="/admin"         element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/teams"   element={<ProtectedRoute roles={['admin']}><AdminTeams /></ProtectedRoute>} />
       <Route path="/admin/players" element={<ProtectedRoute roles={['admin']}><AdminPlayers /></ProtectedRoute>} />
-      <Route path="/admin/trials"  element={<ProtectedRoute roles={['admin']}><AdminTrials /></ProtectedRoute>} />
+      <Route path="/admin/trials"   element={<ProtectedRoute roles={['admin']}><AdminTrials /></ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute roles={['admin']}><AdminSettings /></ProtectedRoute>} />
 
       <Route path="/coach"          element={<ProtectedRoute roles={['coach','admin']}><CoachDashboard /></ProtectedRoute>} />
       <Route path="/coach/training" element={<ProtectedRoute roles={['coach','admin']}><CoachLogTraining /></ProtectedRoute>} />
