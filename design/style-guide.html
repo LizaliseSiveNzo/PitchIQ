@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PitchIQ — Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+--navy-900:#0A1730;--navy-800:#10203F;--navy-700:#16305C;--navy-600:#1E3E76;--navy-500:#2C548F;
+--green-700:#0A7A4B;--green-600:#0BA05F;--green-500:#12B36C;--green-400:#2ECB84;--green-100:#E4F7EE;--energy:#00E676;
+--bg:#F5F8FC;--surface:#FFFFFF;--surface-2:#F0F4F9;--border:#E2E8F1;--border-strong:#CDD7E4;
+--ink:#0E1B2E;--text-muted:#56677D;--text-subtle:#8494A6;
+--success:#0BA05F;--warning:#E8A400;--danger:#E5484D;--info:#2E77D0;
+--success-bg:#E4F7EE;--warning-bg:#FEF3D6;--danger-bg:#FCE8E8;--info-bg:#E7F0FC;
+--rank-rookie:#64748B;--rank-rising:#2E77D0;--rank-elite:#0BA05F;--rank-master:#E8A400;--rank-grandmaster:#C2379A;
+--font-display:'Plus Jakarta Sans',system-ui,sans-serif;--font-body:'Inter',system-ui,sans-serif;
+--r-sm:8px;--r-md:10px;--r-lg:14px;--r-xl:20px;--r-full:999px;
+--shadow-xs:0 1px 2px rgba(16,32,63,.06);--shadow-sm:0 2px 6px rgba(16,32,63,.08);--shadow-md:0 6px 18px rgba(16,32,63,.10);--shadow-lg:0 14px 40px rgba(16,32,63,.14);
+}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-display);color:var(--navy-900);margin:0 0 12px;line-height:1.2}
+h1{font-size:36px;font-weight:800;letter-spacing:-.02em}h2{font-size:26px;font-weight:700}h3{font-size:20px;font-weight:700}h4{font-size:17px;font-weight:600}
+p{margin:0 0 12px;color:var(--text-muted)}.muted{color:var(--text-muted)}.subtle{color:var(--text-subtle)}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 24px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green-700)}
+section{margin:56px 0}hr{border:0;border-top:1px solid var(--border);margin:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px;box-shadow:var(--shadow-xs)}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.between{justify-content:space-between}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-body);font-weight:600;font-size:13px;padding:10px 16px;border-radius:var(--r-md);border:1px solid transparent;cursor:pointer;min-height:40px}
+.btn-primary{background:var(--green-600);color:#fff}.btn-primary:hover{background:var(--green-700)}
+.btn-secondary{background:var(--surface);color:var(--navy-700);border-color:var(--border-strong)}
+.btn-ghost{background:transparent;color:var(--navy-700)}.btn-danger{background:var(--danger);color:#fff}
+.btn-lg{min-height:48px;padding:14px 22px;font-size:15px}
+/* swatches */
+.sw{border-radius:var(--r-md);height:72px;border:1px solid rgba(0,0,0,.05)}
+.swatch small{display:block;margin-top:6px;font-size:12px;color:var(--text-muted)}.swatch b{font-size:13px}
+/* form */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.label{font-size:13px;font-weight:600;color:var(--navy-800)}
+.input{font-family:var(--font-body);font-size:15px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:11px 14px;min-height:44px;width:100%}
+.input:focus{outline:none;border-color:var(--green-500);box-shadow:0 0 0 3px var(--green-100)}
+.segmented{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:3px;gap:3px}
+.segmented button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;color:var(--text-muted);cursor:pointer}
+.segmented button[aria-selected=true]{background:var(--surface);color:var(--navy-800);box-shadow:var(--shadow-xs)}
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--r-full)}
+.b-neutral{background:var(--surface-2);color:var(--text-muted)}.b-success{background:var(--success-bg);color:var(--green-700)}
+.b-warning{background:var(--warning-bg);color:#9A6B00}.b-danger{background:var(--danger-bg);color:#B42318}.b-info{background:var(--info-bg);color:var(--info)}
+/* kpi */
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px}
+.kpi .l{font-size:13px;color:var(--text-muted);font-weight:500}
+.kpi .v{font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--navy-900);line-height:1.1;margin-top:4px}
+.kpi .d{font-size:13px;font-weight:600}.d.up{color:var(--success)}.d.down{color:var(--danger)}
+/* rank */
+.rank{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--r-lg);border:1.5px solid;background:var(--surface);font-weight:700}
+.r-rookie{color:var(--rank-rookie);border-color:var(--rank-rookie)}.r-rising{color:var(--rank-rising);border-color:var(--rank-rising)}
+.r-elite{color:var(--rank-elite);border-color:var(--rank-elite)}.r-master{color:var(--rank-master);border-color:var(--rank-master)}.r-gm{color:var(--rank-grandmaster);border-color:var(--rank-grandmaster)}
+.progress{height:8px;background:var(--surface-2);border-radius:var(--r-full);overflow:hidden}.progress>span{display:block;height:100%;background:var(--green-600)}.progress.energy>span{background:var(--energy)}
+.ladder{display:flex;gap:6px}.ladder .step{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--text-subtle);padding:8px 4px;border-radius:var(--r-sm);background:var(--surface-2)}.ladder .step.active{color:#fff;background:var(--green-600)}
+/* table */
+.table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border)}
+.table th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-subtle);font-weight:700;padding:12px 16px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.table td{padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px}.table tr:last-child td{border-bottom:0}
+.avatar{width:36px;height:36px;border-radius:var(--r-full);background:var(--navy-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+/* mock app */
+.mock{border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--shadow-md);display:grid;grid-template-columns:220px 1fr;background:var(--surface);min-height:420px}
+.mock .side{background:var(--navy-900);color:#C7D2E1;padding:18px}
+.mock .brand{color:#fff;font-family:var(--font-display);font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px;margin-bottom:22px}
+.mock .ni{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r-md);color:#AEBBCC;font-weight:600;font-size:13px;border-left:3px solid transparent}
+.mock .ni.active{background:rgba(11,160,95,.16);color:#fff;border-left-color:var(--green-500)}
+.mock .top{height:60px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.mock .body{padding:22px;background:var(--bg)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--energy);display:inline-block}
+.pill{width:22px;height:22px;border-radius:6px;background:var(--green-100);display:inline-flex;align-items:center;justify-content:center;color:var(--green-700);font-size:12px}
+@media(max-width:900px){.g4,.g3,.g2{grid-template-columns:1fr}.mock{grid-template-columns:1fr}.mock .side{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div>
+      <div class="eyebrow">PitchIQ · Design System v1</div>
+      <h1 style="margin:8px 0 4px">Light &amp; institutional</h1>
+      <p style="max-width:560px">The look that makes a school director trust PitchIQ with their academy. Navy ink, clean surfaces, green reserved for action &amp; success — with an energy green kept for the player &amp; rank moments.</p>
+    </div>
+    <div class="row">
+      <span class="rank r-elite">◆ Elite</span>
+    </div>
+  </header>
+
+  <hr/>
+
+  <!-- COLORS -->
+  <section>
+    <h2>Color</h2>
+    <h4 class="muted" style="margin-top:20px">Brand — Navy ink</h4>
+    <div class="grid g4">
+      <div class="swatch"><div class="sw" style="background:var(--navy-900)"></div><b>navy-900</b><small>#0A1730 · text/headings</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--navy-700)"></div><b>navy-700</b><small>#16305C · nav/brand</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--navy-600)"></div><b>navy-600</b><small>#1E3E76</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--navy-500)"></div><b>navy-500</b><small>#2C548F</small></div>
+    </div>
+    <h4 class="muted" style="margin-top:24px">Green — Action &amp; success</h4>
+    <div class="grid g4">
+      <div class="swatch"><div class="sw" style="background:var(--green-700)"></div><b>green-700</b><small>#0A7A4B</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--green-600)"></div><b>green-600</b><small>#0BA05F · primary</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--green-400)"></div><b>green-400</b><small>#2ECB84</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--energy)"></div><b>energy</b><small>#00E676 · player only</small></div>
+    </div>
+    <h4 class="muted" style="margin-top:24px">Neutrals &amp; semantic</h4>
+    <div class="grid g4">
+      <div class="swatch"><div class="sw" style="background:var(--bg);border:1px solid var(--border)"></div><b>bg</b><small>#F5F8FC</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--surface-2)"></div><b>surface-2</b><small>#F0F4F9</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--warning)"></div><b>warning</b><small>#E8A400</small></div>
+      <div class="swatch"><div class="sw" style="background:var(--danger)"></div><b>danger</b><small>#E5484D</small></div>
+    </div>
+  </section>
+
+  <!-- TYPE -->
+  <section>
+    <h2>Typography</h2>
+    <div class="card">
+      <div class="eyebrow">Plus Jakarta Sans · display</div>
+      <h1 style="margin:6px 0">Run your academy like a pro club</h1>
+      <h3 style="margin:0 0 14px">Section heading — squad performance</h3>
+      <div class="eyebrow" style="margin-top:10px">Inter · body</div>
+      <p style="margin:6px 0 0;max-width:620px">Body copy stays neutral and legible at 15px with generous line-height. Muted text carries secondary detail without competing with the primary action on the screen.</p>
+    </div>
+  </section>
+
+  <!-- BUTTONS + FORM -->
+  <section class="grid g2">
+    <div>
+      <h2>Buttons</h2>
+      <div class="card">
+        <div class="row" style="margin-bottom:14px">
+          <button class="btn btn-primary">Primary action</button>
+          <button class="btn btn-secondary">Secondary</button>
+          <button class="btn btn-ghost">Ghost</button>
+          <button class="btn btn-danger">Danger</button>
+        </div>
+        <button class="btn btn-primary btn-lg" style="width:100%">Book a pilot</button>
+      </div>
+    </div>
+    <div>
+      <h2>Forms</h2>
+      <div class="card">
+        <div class="field"><label class="label">Email</label><input class="input" placeholder="director@academy.co.za"></div>
+        <div class="field"><label class="label">Role</label>
+          <div class="segmented" role="tablist">
+            <button aria-selected="true">Admin</button><button aria-selected="false">Coach</button>
+            <button aria-selected="false">Parent</button><button aria-selected="false">Player</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BADGES + RANK -->
+  <section class="grid g2">
+    <div>
+      <h2>Badges &amp; status</h2>
+      <div class="card">
+        <div class="row" style="margin-bottom:16px">
+          <span class="badge b-neutral">Neutral</span><span class="badge b-success">Accepted</span>
+          <span class="badge b-warning">Pending</span><span class="badge b-danger">Declined</span><span class="badge b-info">Info</span>
+        </div>
+        <div class="row"><span class="pill">✓</span><span class="muted">Trial outcome chips, attendance flags, notification dots</span></div>
+      </div>
+    </div>
+    <div>
+      <h2>Rank system</h2>
+      <div class="card">
+        <div class="row" style="margin-bottom:14px">
+          <span class="rank r-rookie">Rookie</span><span class="rank r-rising">Rising Star</span>
+          <span class="rank r-elite">Elite</span><span class="rank r-master">Master</span><span class="rank r-gm">Grand Master</span>
+        </div>
+        <div class="progress energy" style="margin:10px 0 14px"><span style="width:62%"></span></div>
+        <div class="ladder">
+          <div class="step">Rookie</div><div class="step active">Rising ★</div><div class="step">Elite</div><div class="step">Master</div><div class="step">GM</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs + TABLE -->
+  <section>
+    <h2>Data — KPIs &amp; tables</h2>
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="kpi"><div class="l">Total players</div><div class="v">248</div><div class="d up">▲ 12 this month</div></div>
+      <div class="kpi"><div class="l">Teams</div><div class="v">16</div><div class="d">4 divisions</div></div>
+      <div class="kpi"><div class="l">Avg attendance</div><div class="v">87%</div><div class="d up">▲ 3%</div></div>
+      <div class="kpi"><div class="l">Trial pipeline</div><div class="v">34</div><div class="d down">9 pending</div></div>
+    </div>
+    <table class="table">
+      <thead><tr><th>Player</th><th>Division</th><th>Attendance</th><th>Avg rating</th><th>Rank</th></tr></thead>
+      <tbody>
+        <tr><td><span class="row"><span class="avatar">TM</span> Thabo Mokoena</span></td><td>U15</td><td>92%</td><td>4.4</td><td><span class="badge b-success">Elite</span></td></tr>
+        <tr><td><span class="row"><span class="avatar">SN</span> Sipho Ndlovu</span></td><td>U15</td><td>78%</td><td>3.8</td><td><span class="badge b-info">Rising Star</span></td></tr>
+        <tr><td><span class="row"><span class="avatar">LK</span> Lerato Khumalo</span></td><td>U13</td><td>96%</td><td>4.7</td><td><span class="badge b-warning">Master</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SAMPLE SCREEN: ADMIN -->
+  <section>
+    <h2>Sample screen — Admin dashboard</h2>
+    <div class="mock">
+      <div class="side">
+        <div class="brand"><span class="dot"></span> PitchIQ</div>
+        <div class="ni active">▚ Dashboard</div><div class="ni">👥 Teams</div><div class="ni">⚽ Players</div>
+        <div class="ni">📋 Trials</div><div class="ni">📊 Reports</div><div class="ni">⚙ Settings</div>
+      </div>
+      <div>
+        <div class="top"><h3 style="margin:0">Dashboard</h3><div class="row"><span class="badge b-neutral">Tux Academy</span><span class="avatar">LN</span></div></div>
+        <div class="body">
+          <div class="grid g4" style="margin-bottom:16px">
+            <div class="kpi"><div class="l">Players</div><div class="v">248</div></div>
+            <div class="kpi"><div class="l">Attendance</div><div class="v">87%</div></div>
+            <div class="kpi"><div class="l">Fixtures</div><div class="v">6</div></div>
+            <div class="kpi"><div class="l">Trials</div><div class="v">34</div></div>
+          </div>
+          <div class="grid g2">
+            <div class="card"><h4>Upcoming fixtures</h4><p class="muted" style="margin:0">U15 vs Rivera FC · Sat 10:00 · Home</p></div>
+            <div class="card"><h4>Star player spotlight</h4><div class="row"><span class="avatar">LK</span><div><b>Lerato Khumalo</b><div class="subtle">U13 · Master</div></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAMPLE SCREEN: PLAYER -->
+  <section>
+    <h2>Sample screen — Player profile (energy moment)</h2>
+    <div class="card" style="max-width:520px">
+      <div class="row between">
+        <div class="row"><span class="avatar" style="width:52px;height:52px;font-size:16px">TM</span><div><h3 style="margin:0">Thabo Mokoena</h3><div class="subtle">U15 · Winger</div></div></div>
+        <span class="rank r-elite">◆ Elite</span>
+      </div>
+      <div class="progress energy" style="margin:16px 0 6px"><span style="width:62%"></span></div>
+      <div class="subtle" style="font-size:13px">620 pts to Master</div>
+      <div class="grid g3" style="margin-top:16px">
+        <div class="kpi"><div class="l">Attendance</div><div class="v" style="font-size:26px">92%</div></div>
+        <div class="kpi"><div class="l">Minutes</div><div class="v" style="font-size:26px">840</div></div>
+        <div class="kpi"><div class="l">Avg rating</div><div class="v" style="font-size:26px">4.4</div></div>
+      </div>
+      <div class="card" style="margin-top:16px;background:var(--surface-2);border:0">
+        <div class="eyebrow">AI Summary — last 30 days</div>
+        <p style="margin:8px 0 0">Thabo's pace on the wing is creating real chances — three assists this month. Focus area: tracking back on defence. Home tip: 10 mins of shuttle runs, 3× a week. 💪</p>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+  <p class="subtle" style="text-align:center;margin-top:24px">PitchIQ — Confidential · Built with Claude · RevidArch</p>
+</div>
+</body>
+</html>

@@ -1,21 +1,24 @@
-// PitchIQ design tokens — dark theme, green accent (Blueprint Prompt 3).
+// PitchIQ design tokens — light & institutional. Mirrors design-system.css.
+// Prefer the CSS variables in components; this is for JS-side use (charts, etc.).
 export const theme = {
   colors: {
-    bg: '#0a0e14',
-    surface: '#141a24',
-    surfaceAlt: '#1b2430',
-    border: '#26313f',
-    text: '#e8edf2',
-    textMuted: '#8a97a6',
-    accent: '#00e676',
-    danger: '#ff5252',
+    bg: '#F5F8FC',
+    surface: '#FFFFFF',
+    surfaceAlt: '#F0F4F9',
+    border: '#E2E8F1',
+    ink: '#0E1B2E',
+    textMuted: '#56677D',
+    navy: '#16305C',
+    green: '#0BA05F',
+    energy: '#00E676',
+    danger: '#E5484D',
   },
   radius: '14px',
   ranks: {
-    Rookie: '#8a97a6',
-    Rising_Star: '#4fc3f7',
-    Elite: '#00e676',
-    Master: '#ffb300',
-    Grand_Master: '#ff4081',
+    Rookie: '#64748B',
+    Rising_Star: '#2E77D0',
+    Elite: '#0BA05F',
+    Master: '#E8A400',
+    Grand_Master: '#C2379A',
   },
 };
