@@ -8,9 +8,14 @@ import AdminPlayers from './pages/AdminPlayers.jsx';
 import CoachDashboard from './pages/CoachDashboard.jsx';
 import CoachLogTraining from './pages/CoachLogTraining.jsx';
 import CoachLogMatch from './pages/CoachLogMatch.jsx';
+import CoachSchedule from './pages/CoachSchedule.jsx';
 import ParentDashboard from './pages/ParentDashboard.jsx';
 import PlayerProfile from './pages/PlayerProfile.jsx';
+import ScheduleView from './pages/ScheduleView.jsx';
+import Notifications from './pages/Notifications.jsx';
 import TrialRegister from './pages/TrialRegister.jsx';
+
+const ANY = ['admin','coach','parent','player'];
 
 export default function App() {
   return (
@@ -26,9 +31,13 @@ export default function App() {
       <Route path="/coach"          element={<ProtectedRoute roles={['coach','admin']}><CoachDashboard /></ProtectedRoute>} />
       <Route path="/coach/training" element={<ProtectedRoute roles={['coach','admin']}><CoachLogTraining /></ProtectedRoute>} />
       <Route path="/coach/match"    element={<ProtectedRoute roles={['coach','admin']}><CoachLogMatch /></ProtectedRoute>} />
+      <Route path="/coach/schedule" element={<ProtectedRoute roles={['coach','admin']}><CoachSchedule /></ProtectedRoute>} />
 
       <Route path="/parent" element={<ProtectedRoute roles={['parent','admin']}><ParentDashboard /></ProtectedRoute>} />
       <Route path="/player" element={<ProtectedRoute roles={['player','admin']}><PlayerProfile /></ProtectedRoute>} />
+
+      <Route path="/schedule"      element={<ProtectedRoute roles={ANY}><ScheduleView /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute roles={ANY}><Notifications /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
