@@ -10,6 +10,8 @@ const NAV = {
   parent: [['My Child','⚽','/parent'],['Schedule','📅','/schedule'],['Notifications','🔔','/notifications'],['Messages','💬',null]],
   player: [['My Profile','⚽','/player'],['Leaderboard','🏆',null],['Schedule','📅','/schedule']],
 };
+// short labels for the bottom tab bar
+const SHORT = { 'Dashboard':'Home', 'Log Training':'Train', 'Log Match':'Match', 'My Profile':'Profile', 'My Child':'Child', 'Notifications':'Alerts' };
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -17,6 +19,7 @@ export default function AppShell({ active, title, children }) {
   const { profile, role, session, logout } = useAuth();
   const navigate = useNavigate();
   const items = NAV[role] || [];
+  const tabs = items.filter(([, , path]) => path).slice(0, 4);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -24,6 +27,8 @@ export default function AppShell({ active, title, children }) {
     supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('read', false)
       .then(({ count }) => setUnread(count || 0));
   }, [session]);
+
+  function exit() { logout(); navigate('/login'); }
 
   return (
     <div className="app">
@@ -37,13 +42,11 @@ export default function AppShell({ active, title, children }) {
             : <div key={label} className={cls} style={{ opacity: .55, cursor: 'default' }} title="Coming soon">{inner}</div>;
         })}
         <div style={{ marginTop: 'auto' }}>
-          <div className="nav-item" onClick={() => { logout(); navigate('/login'); }}>
-            <span style={{ width: 18, textAlign: 'center' }}>↩</span> Exit
-          </div>
+          <div className="nav-item" onClick={exit}><span style={{ width: 18, textAlign: 'center' }}>↩</span> Exit</div>
         </div>
       </aside>
 
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div className="app-col" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <header className="topbar">
           <h3 style={{ margin: 0 }}>{title}</h3>
           <div className="row">
@@ -52,13 +55,23 @@ export default function AppShell({ active, title, children }) {
               🔔
               {unread > 0 && <span style={{ position: 'absolute', top: 2, right: 2, background: 'var(--danger)', color: '#fff', borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{unread}</span>}
             </button>
-            <span className="badge badge-neutral">{profile?.org || 'PitchIQ'}</span>
-            {session?.demo && <span className="badge badge-success">Demo mode</span>}
+            <span className="badge badge-neutral hide-mobile">{profile?.org || 'PitchIQ'}</span>
+            {session?.demo && <span className="badge badge-success hide-mobile">Demo mode</span>}
             <span className="avatar">{initials(profile?.name)}</span>
           </div>
         </header>
         <main className="content">{children}</main>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="tabbar">
+        {tabs.map(([label, icon, path]) => (
+          <Link key={label} to={path} className={label === active ? 'active' : ''}>
+            <span className="tab-ic">{icon}</span>{SHORT[label] || label}
+          </Link>
+        ))}
+        <a onClick={exit} style={{ cursor: 'pointer' }}><span className="tab-ic">↩</span>Exit</a>
+      </nav>
     </div>
   );
 }
