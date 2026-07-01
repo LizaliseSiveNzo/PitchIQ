@@ -1,0 +1,69 @@
+import { useEffect, useState } from 'react';
+import AppShell from '../components/AppShell.jsx';
+import { supabase } from '../lib/supabaseClient.js';
+import { useAuth } from '../context/AuthContext.jsx';
+
+const DIVISIONS = ['U11','U12','U13','U14','U15','U16','U19','First_Team'];
+
+export default function AdminTeams() {
+  const { profile, session } = useAuth();
+  const [teams, setTeams] = useState([]);
+  const [name, setName] = useState('');
+  const [division, setDivision] = useState('U11');
+  const [sport, setSport] = useState('soccer');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function load() {
+    const { data } = await supabase.from('teams').select('id,name,division,sport').order('division');
+    setTeams(data || []);
+  }
+  useEffect(() => { if (!session?.demo) load(); }, []);
+
+  async function addTeam(e) {
+    e.preventDefault(); setErr(''); setBusy(true);
+    try {
+      const { error } = await supabase.from('teams').insert({ name, division, sport, org_id: profile?.org_id });
+      if (error) { setErr(error.message); return; }
+      setName(''); await load();
+    } finally { setBusy(false); }
+  }
+
+  const noOrg = !session?.demo && profile && !profile.org_id;
+
+  return (
+    <AppShell role="admin" active="Teams" title="Teams">
+      {session?.demo && <div className="badge badge-success" style={{ marginBottom: 16 }}>Demo mode — sign in with a real admin to save teams</div>}
+      {noOrg && <div className="card" style={{ marginBottom: 16 }}>Create your academy on the Dashboard first, then add teams here.</div>}
+
+      <div className="grid grid-2" style={{ alignItems: 'start' }}>
+        <div className="card">
+          <h4>Add a team</h4>
+          <form onSubmit={addTeam}>
+            <div className="field"><label className="label">Team name</label>
+              <input className="input" placeholder="e.g. U15 Boys" value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="field"><label className="label">Division</label>
+              <select className="select" value={division} onChange={(e) => setDivision(e.target.value)}>
+                {DIVISIONS.map((d) => <option key={d} value={d}>{d.replace('_',' ')}</option>)}
+              </select></div>
+            <div className="field"><label className="label">Sport</label>
+              <select className="select" value={sport} onChange={(e) => setSport(e.target.value)}>
+                {['soccer','rugby','cricket','chess'].map((s) => <option key={s} value={s}>{s}</option>)}
+              </select></div>
+            {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</p>}
+            <button className="btn btn-primary btn-block" disabled={busy || !name.trim() || noOrg}>{busy ? 'Saving…' : 'Add team'}</button>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="section-header"><h4 style={{ margin: 0 }}>Your teams</h4><span className="badge badge-neutral">{teams.length}</span></div>
+          {teams.length === 0
+            ? <p className="subtle">No teams yet. Add your first team.</p>
+            : <table className="table"><thead><tr><th>Name</th><th>Division</th><th>Sport</th></tr></thead>
+                <tbody>{teams.map((t) => <tr key={t.id}><td>{t.name}</td><td>{t.division.replace('_',' ')}</td><td>{t.sport}</td></tr>)}</tbody>
+              </table>}
+        </div>
+      </div>
+    </AppShell>
+  );
+}

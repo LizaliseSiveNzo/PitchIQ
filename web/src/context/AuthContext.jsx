@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabaseClient.js';
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
-// Demo profiles so the app can be explored without a real account.
 export const DEMO_USERS = {
   admin:  { id: 'demo-admin',  name: 'Lizalise Nzo',   role: 'admin',  org: 'Tux Academy' },
   coach:  { id: 'demo-coach',  name: 'Coach Dlamini',  role: 'coach',  org: 'Tux Academy' },
@@ -27,12 +26,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!session?.user || session.demo) return;   // demo sessions skip DB lookup
+    if (!session?.user || session.demo) return;
     supabase.from('users').select('*').eq('id', session.user.id).single()
       .then(({ data }) => { if (data) setProfile(data); });
   }, [session]);
 
-  // ---- Real Supabase auth ----
+  async function refreshProfile() {
+    if (!session?.user || session.demo) return;
+    const { data } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+    if (data) setProfile(data);
+    return data;
+  }
+
   async function signIn({ email, password }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
@@ -44,17 +49,15 @@ export function AuthProvider({ children }) {
   async function signUp({ name, email, password, role, childCode }) {
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { name, role } },   // read by the handle_new_user trigger
+      options: { data: { name, role } },
     });
     if (error) return { error: error.message };
-    // If a session exists (email confirmation disabled), a parent can link their child now.
     if (role === 'parent' && childCode && data.session) {
       await supabase.rpc('link_child', { code: childCode });
     }
     return { needsConfirmation: !data.session, role };
   }
 
-  // ---- Demo / master ----
   function demoLogin(role) {
     setProfile(DEMO_USERS[role]);
     setSession({ user: { id: DEMO_USERS[role].id }, demo: true });
@@ -69,7 +72,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       session, profile, role: profile?.role, loading,
-      signIn, signUp, demoLogin, logout,
+      signIn, signUp, demoLogin, logout, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>
