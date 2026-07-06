@@ -11,13 +11,16 @@ import CoachDashboard from './pages/CoachDashboard.jsx';
 import CoachLogTraining from './pages/CoachLogTraining.jsx';
 import CoachLogMatch from './pages/CoachLogMatch.jsx';
 import CoachSchedule from './pages/CoachSchedule.jsx';
-import ParentDashboard from './pages/ParentDashboard.jsx';
 import PlayerProfile from './pages/PlayerProfile.jsx';
+import CoachAnnouncements from './pages/CoachAnnouncements.jsx';
+import CoachPlayerDetail from './pages/CoachPlayerDetail.jsx';
+import Announcements from './pages/Announcements.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
 import ScheduleView from './pages/ScheduleView.jsx';
 import Notifications from './pages/Notifications.jsx';
 import TrialRegister from './pages/TrialRegister.jsx';
 
-const ANY = ['admin','coach','parent','player'];
+const ANY = ['admin','coach','player'];
 
 export default function App() {
   return (
@@ -36,10 +39,13 @@ export default function App() {
       <Route path="/coach/training" element={<ProtectedRoute roles={['coach','admin']}><CoachLogTraining /></ProtectedRoute>} />
       <Route path="/coach/match"    element={<ProtectedRoute roles={['coach','admin']}><CoachLogMatch /></ProtectedRoute>} />
       <Route path="/coach/schedule" element={<ProtectedRoute roles={['coach','admin']}><CoachSchedule /></ProtectedRoute>} />
+      <Route path="/coach/announcements" element={<ProtectedRoute roles={['coach','admin']}><CoachAnnouncements /></ProtectedRoute>} />
+      <Route path="/coach/player/:id" element={<ProtectedRoute roles={['coach','admin']}><CoachPlayerDetail /></ProtectedRoute>} />
 
-      <Route path="/parent" element={<ProtectedRoute roles={['parent','admin']}><ParentDashboard /></ProtectedRoute>} />
-      <Route path="/player" element={<ProtectedRoute roles={['player','admin']}><PlayerProfile /></ProtectedRoute>} />
+      <Route path="/player"        element={<ProtectedRoute roles={['player','admin']}><PlayerProfile /></ProtectedRoute>} />
+      <Route path="/announcements" element={<ProtectedRoute roles={['player','admin']}><Announcements /></ProtectedRoute>} />
 
+      <Route path="/leaderboard"   element={<ProtectedRoute roles={ANY}><Leaderboard /></ProtectedRoute>} />
       <Route path="/schedule"      element={<ProtectedRoute roles={ANY}><ScheduleView /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute roles={ANY}><Notifications /></ProtectedRoute>} />
 

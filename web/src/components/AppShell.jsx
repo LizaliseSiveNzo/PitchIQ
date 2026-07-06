@@ -6,12 +6,11 @@ import { supabase } from '../lib/supabaseClient.js';
 // [label, icon, path|null]
 const NAV = {
   admin:  [['Dashboard','▚','/admin'],['Teams','👥','/admin/teams'],['Players','⚽','/admin/players'],['Trials','📋','/admin/trials'],['Reports','📊',null],['Settings','⚙','/admin/settings']],
-  coach:  [['Dashboard','▚','/coach'],['Log Training','➕','/coach/training'],['Log Match','⚽','/coach/match'],['Schedule','📅','/coach/schedule'],['Messages','💬',null]],
-  parent: [['My Child','⚽','/parent'],['Schedule','📅','/schedule'],['Notifications','🔔','/notifications'],['Messages','💬',null]],
-  player: [['My Profile','⚽','/player'],['Leaderboard','🏆',null],['Schedule','📅','/schedule']],
+  coach:  [['Dashboard','▚','/coach'],['Schedule','📅','/coach/schedule'],['Announcements','📣','/coach/announcements'],['Log Training','➕','/coach/training'],['Log Match','⚽','/coach/match']],
+  player: [['My Profile','⚽','/player'],['Schedule','📅','/schedule'],['Announcements','📣','/announcements'],['Leaderboard','🏆','/leaderboard']],
 };
 // short labels for the bottom tab bar
-const SHORT = { 'Dashboard':'Home', 'Log Training':'Train', 'Log Match':'Match', 'My Profile':'Profile', 'My Child':'Child', 'Notifications':'Alerts' };
+const SHORT = { 'Dashboard':'Home', 'Log Training':'Train', 'Log Match':'Match', 'My Profile':'Profile', 'Announcements':'News', 'Notifications':'Alerts' };
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -56,7 +55,6 @@ export default function AppShell({ active, title, children }) {
               {unread > 0 && <span style={{ position: 'absolute', top: 2, right: 2, background: 'var(--danger)', color: '#fff', borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{unread}</span>}
             </button>
             <span className="badge badge-neutral hide-mobile">{profile?.org || 'PitchIQ'}</span>
-            {session?.demo && <span className="badge badge-success hide-mobile">Demo mode</span>}
             <span className="avatar">{initials(profile?.name)}</span>
           </div>
         </header>

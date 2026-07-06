@@ -9,6 +9,7 @@ export default function CoachSchedule() {
   const [teams, setTeams] = useState([]);
   const [teamId, setTeamId] = useState('');
   const [upcoming, setUpcoming] = useState([]);
+  const [rsvps, setRsvps] = useState({});
   const [msg, setMsg] = useState(''); const [err, setErr] = useState('');
 
   // fixture form
@@ -34,10 +35,24 @@ export default function CoachSchedule() {
       supabase.from('training_sessions').select('id,starts_at,location,notes').eq('team_id', teamId).not('starts_at', 'is', null).gte('starts_at', nowIso),
     ]);
     const items = [
-      ...(matches || []).map((m) => ({ id: 'm' + m.id, type: 'Match', when: m.date, title: `vs ${m.opponent}`, where: m.venue })),
-      ...(practices || []).map((p) => ({ id: 'p' + p.id, type: 'Practice', when: p.starts_at, title: p.notes || 'Training', where: p.location })),
+      ...(matches || []).map((m) => ({ id: 'm' + m.id, kind: 'match', rawId: m.id, type: 'Match', when: m.date, title: `vs ${m.opponent}`, where: m.venue })),
+      ...(practices || []).map((p) => ({ id: 'p' + p.id, kind: 'practice', rawId: p.id, type: 'Practice', when: p.starts_at, title: p.notes || 'Training', where: p.location })),
     ].sort((a, b) => new Date(a.when) - new Date(b.when));
     setUpcoming(items);
+
+    const ids = items.map((i) => i.rawId);
+    if (ids.length) {
+      const { data: r } = await supabase.from('event_rsvps')
+        .select('event_type,event_id,status,reason,players(users(name))').in('event_id', ids);
+      const map = {};
+      (r || []).forEach((x) => {
+        const k = `${x.event_type}:${x.event_id}`;
+        map[k] = map[k] || { going: 0, absent: [] };
+        if (x.status === 'going') map[k].going += 1;
+        else map[k].absent.push({ name: x.players?.users?.name || 'Player', reason: x.reason });
+      });
+      setRsvps(map);
+    } else setRsvps({});
   }
 
   async function addFixture(e) {
@@ -119,12 +134,31 @@ export default function CoachSchedule() {
         {upcoming.length === 0 ? <p className="subtle">Nothing scheduled yet.</p> : (
           <div className="stack" style={{ gap: 10 }}>
             {upcoming.map((u) => (
-              <div key={u.id} className="row between" style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                <div>
-                  <strong>{u.title}</strong>
-                  <div className="subtle" style={{ fontSize: 13 }}>{new Date(u.when).toLocaleString()}{u.where ? ` · ${u.where}` : ''}</div>
+              <div key={u.id} style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                <div className="row between">
+                  <div>
+                    <strong>{u.title}</strong>
+                    <div className="subtle" style={{ fontSize: 13 }}>{new Date(u.when).toLocaleString()}{u.where ? ` · ${u.where}` : ''}</div>
+                  </div>
+                  <span className={`badge ${u.type === 'Match' ? 'badge-info' : 'badge-success'}`}>{u.type}</span>
                 </div>
-                <span className={`badge ${u.type === 'Match' ? 'badge-info' : 'badge-success'}`}>{u.type}</span>
+                {(() => {
+                  const r = rsvps[`${u.kind}:${u.rawId}`];
+                  if (!r) return <div className="subtle" style={{ fontSize: 12, marginTop: 6 }}>No availability responses yet.</div>;
+                  return (
+                    <div style={{ fontSize: 13, marginTop: 6 }}>
+                      <span className="badge badge-success" style={{ marginRight: 8 }}>✓ {r.going} going</span>
+                      {r.absent.length > 0 && (
+                        <span className="badge badge-warning">✗ {r.absent.length} out</span>
+                      )}
+                      {r.absent.map((a, i) => (
+                        <div key={i} className="subtle" style={{ fontSize: 12, marginTop: 4 }}>
+                          ✗ {a.name}{a.reason ? ` — ${a.reason}` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

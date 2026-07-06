@@ -4,11 +4,9 @@
   "private": true,
   "description": "PitchIQ — sports academy management platform (Built with Claude · RevidArch)",
   "workspaces": [
-    "backend",
     "web"
   ],
   "scripts": {
-    "dev:backend": "npm run dev --workspace backend",
     "dev:web": "npm run dev --workspace web",
     "build:web": "npm run build --workspace web"
   },

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell.jsx';
 import RankBadge from '../components/RankBadge.jsx';
 import StatCard from '../components/StatCard.jsx';
+import InjuryThread from '../components/InjuryThread.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -11,12 +12,20 @@ const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').
 
 const DEMO = { name: 'Thabo Mokoena', position: 'Winger', team: 'U15', rank: 'Elite', progress: 62,
   attendance_pct: 92, minutes: 840, avg_rating: 4.4 };
+const DEMO_NOTES = [
+  { id: 1, note: 'Great pressing today. Keep working on your first touch — 10 min of wall passes a day.', created_at: new Date(Date.now() - 86400e3).toISOString() },
+  { id: 2, note: 'Man of the match vs Rivera FC. Composure in the box has improved a lot.', created_at: new Date(Date.now() - 5 * 86400e3).toISOString() },
+];
+const DEMO_MEAL = 'Breakfast: oats + banana\nPre-training: fruit + water\nDinner: chicken, brown rice, veg';
 const DEMO_SUMMARY = "Thabo's pace on the wing is creating real chances — three assists this month. Focus area: tracking back on defence. Home tip: 10 minutes of shuttle runs, 3× a week.";
 
 export default function PlayerProfile() {
   const { session } = useAuth();
   const [ov, setOv] = useState(session?.demo ? DEMO : null);
   const [loading, setLoading] = useState(!session?.demo);
+
+  const [notes, setNotes] = useState(session?.demo ? DEMO_NOTES : []);
+  const [mealPlan, setMealPlan] = useState(session?.demo ? DEMO_MEAL : '');
 
   const [ai, setAi] = useState(session?.demo ? DEMO_SUMMARY : '');
   const [aiBusy, setAiBusy] = useState(false);
@@ -25,6 +34,13 @@ export default function PlayerProfile() {
   useEffect(() => {
     if (session?.demo) return;
     supabase.rpc('my_player_overview').then(({ data }) => { setOv(data); setLoading(false); });
+    supabase.from('coach_player_notes')
+      .select('id,note,diet_plan,created_at')
+      .order('created_at', { ascending: false }).limit(30)
+      .then(({ data }) => {
+        setNotes((data || []).filter((n) => n.note));
+        setMealPlan((data || []).find((n) => n.diet_plan)?.diet_plan || '');
+      });
   }, []);
 
   async function generate() {
@@ -84,6 +100,31 @@ export default function PlayerProfile() {
             <StatCard label="Minutes" value={ov.minutes ?? 0} />
             <StatCard label="Avg rating" value={ov.avg_rating ?? '—'} />
           </div>
+
+          <div className="card" style={{ marginTop: 18, background: 'var(--surface-2)', border: 0 }}>
+            <strong style={{ color: 'var(--green-700)', fontSize: 13, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+              🥗 Meal Plan
+            </strong>
+            {mealPlan
+              ? <p style={{ margin: '10px 0 0', whiteSpace: 'pre-line' }}>{mealPlan}</p>
+              : <p className="subtle" style={{ margin: '10px 0 0' }}>No meal plan from your coach yet.</p>}
+          </div>
+
+          <div className="card" style={{ marginTop: 18, background: 'var(--surface-2)', border: 0 }}>
+            <strong style={{ color: 'var(--green-700)', fontSize: 13, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+              📝 Coach Notes
+            </strong>
+            {notes.length === 0
+              ? <p className="subtle" style={{ margin: '10px 0 0' }}>No notes from your coach yet.</p>
+              : notes.map((n) => (
+                <div key={n.id} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <p style={{ margin: 0 }}>{n.note}</p>
+                  <div className="subtle" style={{ fontSize: 12, marginTop: 4 }}>{new Date(n.created_at).toLocaleDateString()}</div>
+                </div>
+              ))}
+          </div>
+
+          <InjuryThread />
 
           <div className="card" style={{ marginTop: 18, background: 'var(--surface-2)', border: 0 }}>
             <div className="row between">

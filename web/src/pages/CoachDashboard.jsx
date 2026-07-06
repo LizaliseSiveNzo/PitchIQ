@@ -87,7 +87,7 @@ function LiveCoach() {
           : <table className="table"><thead><tr><th>Player</th><th>Position</th><th>Attendance</th><th>Avg rating</th><th>Rank</th></tr></thead>
               <tbody>{squad.map((p) => (
                 <tr key={p.id}>
-                  <td><span className="row"><span className="avatar">{p.name.split(' ').map((w)=>w[0]).join('')}</span> {p.name}</span></td>
+                  <td><Link to={`/coach/player/${p.id}`} className="row" style={{ color: 'inherit', textDecoration: 'none' }}><span className="avatar">{p.name.split(' ').map((w)=>w[0]).join('')}</span> <span style={{ textDecoration: 'underline' }}>{p.name}</span></Link></td>
                   <td>{p.position || '—'}</td>
                   <td>{p.sessions ? `${p.rate}%` : '—'}</td>
                   <td>{p.avg}</td>

@@ -4,13 +4,6 @@ import { supabase } from '../lib/supabaseClient.js';
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
-export const DEMO_USERS = {
-  admin:  { id: 'demo-admin',  name: 'Lizalise Nzo',   role: 'admin',  org: 'Tux Academy' },
-  coach:  { id: 'demo-coach',  name: 'Coach Dlamini',  role: 'coach',  org: 'Tux Academy' },
-  parent: { id: 'demo-parent', name: 'Mrs. Mokoena',   role: 'parent', org: 'Tux Academy' },
-  player: { id: 'demo-player', name: 'Thabo Mokoena',  role: 'player', org: 'Tux Academy' },
-};
-
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -46,21 +39,13 @@ export function AuthProvider({ children }) {
     return { role: prof?.role };
   }
 
-  async function signUp({ name, email, password, role, childCode }) {
+  async function signUp({ name, email, password, role }) {
     const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { data: { name, role } },
     });
     if (error) return { error: error.message };
-    if (role === 'parent' && childCode && data.session) {
-      await supabase.rpc('link_child', { code: childCode });
-    }
     return { needsConfirmation: !data.session, role };
-  }
-
-  function demoLogin(role) {
-    setProfile(DEMO_USERS[role]);
-    setSession({ user: { id: DEMO_USERS[role].id }, demo: true });
   }
 
   function logout() {
@@ -72,7 +57,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       session, profile, role: profile?.role, loading,
-      signIn, signUp, demoLogin, logout, refreshProfile,
+      signIn, signUp, logout, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>
