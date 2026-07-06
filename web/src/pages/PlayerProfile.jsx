@@ -3,6 +3,7 @@ import AppShell from '../components/AppShell.jsx';
 import RankBadge from '../components/RankBadge.jsx';
 import StatCard from '../components/StatCard.jsx';
 import InjuryThread from '../components/InjuryThread.jsx';
+import MatchLog from '../components/MatchLog.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -123,6 +124,8 @@ export default function PlayerProfile() {
                 </div>
               ))}
           </div>
+
+          <MatchLog />
 
           <InjuryThread />
 
