@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell.jsx';
 import RankBadge from '../components/RankBadge.jsx';
+import WeeklyHighlights from '../components/WeeklyHighlights.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -18,6 +19,8 @@ export default function Leaderboard() {
   return (
     <AppShell role={role} active="Leaderboard" title="Leaderboard">
       <div className="container" style={{ maxWidth: 680, padding: 0 }}>
+        <WeeklyHighlights />
+        <div className="section-header"><h4 style={{ margin: 0 }}>Season leaderboard</h4></div>
         {rows === null ? <div className="card">Loading…</div> :
          rows.length === 0 ? (
           <div className="card"><p className="subtle" style={{ margin: 0 }}>
