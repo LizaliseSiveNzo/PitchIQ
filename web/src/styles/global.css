@@ -118,3 +118,36 @@
   .lp-nav .inner { padding: 12px 16px; }
   .lp-nav .btn { padding: 8px 12px; font-size: 12px; }
 }
+
+/* ===================== Phone-first refinements ===================== */
+html { -webkit-text-size-adjust: 100%; }
+
+@media (max-width: 767px) {
+  body { overflow-x: hidden; }
+
+  /* keep the top bar visible while scrolling — app-like */
+  .app .topbar { position: sticky; top: 0; z-index: 30; }
+
+  /* KPI/stat rows read better 2-up than stacked full-width */
+  .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .kpi { padding: 14px; }
+  .kpi-value { font-size: 24px; }
+
+  /* tighter cards + headings for small screens */
+  .card { padding: 16px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 18px; }
+
+  /* less horizontal scrolling on tables */
+  .table { min-width: 480px; }
+  .table th, .table td { padding: 10px 12px; }
+
+  /* app-like bottom tabs */
+  .tabbar { padding-top: 8px; }
+  .tabbar a { font-size: 10px; }
+  .tabbar .tab-ic { font-size: 21px; }
+  .tabbar a.active { background: var(--green-100); color: var(--green-700); font-weight: 800; }
+
+  /* forms comfortable to tap */
+  .input, .select, .textarea { font-size: 16px; }   /* 16px avoids iOS zoom-on-focus */
+}

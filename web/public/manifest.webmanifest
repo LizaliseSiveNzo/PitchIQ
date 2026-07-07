@@ -1,0 +1,11 @@
+{
+  "name": "PitchIQ",
+  "short_name": "PitchIQ",
+  "description": "Sports academy management — track players, ratings, schedule and more.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15161A",
+  "theme_color": "#15161A"
+}
