@@ -6,11 +6,11 @@ import { supabase } from '../lib/supabaseClient.js';
 // [label, icon, path|null]
 const NAV = {
   admin:  [['Dashboard','▚','/admin'],['Teams','👥','/admin/teams'],['Players','⚽','/admin/players'],['Trials','📋','/admin/trials'],['Reports','📊',null],['Settings','⚙','/admin/settings']],
-  coach:  [['Dashboard','▚','/coach'],['Schedule','📅','/coach/schedule'],['Announcements','📣','/coach/announcements'],['Log Training','➕','/coach/training'],['Log Match','⚽','/coach/match']],
+  coach:  [['Dashboard','▚','/coach'],['Schedule','📅','/coach/schedule'],['Announcements','📣','/coach/announcements'],['Log Training','➕','/coach/training'],['Log Match','⚽','/coach/match'],['Lineup','📋','/coach/lineup']],
   player: [['My Profile','⚽','/player'],['Schedule','📅','/schedule'],['Announcements','📣','/announcements'],['Leaderboard','🏆','/leaderboard']],
 };
 // short labels for the bottom tab bar
-const SHORT = { 'Dashboard':'Home', 'Log Training':'Train', 'Log Match':'Match', 'My Profile':'Profile', 'Announcements':'News', 'Notifications':'Alerts' };
+const SHORT = { 'Dashboard':'Home', 'Log Training':'Train', 'Log Match':'Match', 'My Profile':'Profile', 'Announcements':'News', 'Notifications':'Alerts', 'Lineup':'Lineup' };
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 

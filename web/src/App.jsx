@@ -11,6 +11,7 @@ import CoachDashboard from './pages/CoachDashboard.jsx';
 import CoachLogTraining from './pages/CoachLogTraining.jsx';
 import CoachLogMatch from './pages/CoachLogMatch.jsx';
 import CoachSchedule from './pages/CoachSchedule.jsx';
+import CoachLineup from './pages/CoachLineup.jsx';
 import PlayerProfile from './pages/PlayerProfile.jsx';
 import CoachAnnouncements from './pages/CoachAnnouncements.jsx';
 import CoachPlayerDetail from './pages/CoachPlayerDetail.jsx';
@@ -39,6 +40,7 @@ export default function App() {
       <Route path="/coach/training" element={<ProtectedRoute roles={['coach','admin']}><CoachLogTraining /></ProtectedRoute>} />
       <Route path="/coach/match"    element={<ProtectedRoute roles={['coach','admin']}><CoachLogMatch /></ProtectedRoute>} />
       <Route path="/coach/schedule" element={<ProtectedRoute roles={['coach','admin']}><CoachSchedule /></ProtectedRoute>} />
+      <Route path="/coach/lineup"   element={<ProtectedRoute roles={['coach','admin']}><CoachLineup /></ProtectedRoute>} />
       <Route path="/coach/announcements" element={<ProtectedRoute roles={['coach','admin']}><CoachAnnouncements /></ProtectedRoute>} />
       <Route path="/coach/player/:id" element={<ProtectedRoute roles={['coach','admin']}><CoachPlayerDetail /></ProtectedRoute>} />
 
