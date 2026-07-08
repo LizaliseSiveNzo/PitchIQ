@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 // Real Supabase auth + master login (123/123) + role demo entry.
 
-const ROLES = ['Admin', 'Coach', 'Player'];
+const ROLES = ['Coach', 'Player'];
 
 export default function Login() {
   const [mode, setMode] = useState('login'); // login | register
-  const [role, setRole] = useState('Admin');
+  const [role, setRole] = useState('Coach');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
