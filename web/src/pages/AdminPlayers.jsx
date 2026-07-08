@@ -7,30 +7,44 @@ const genCode = () => 'PIQ-' + Math.random().toString(36).slice(2, 7).toUpperCas
 
 export default function AdminPlayers() {
   const { session, profile } = useAuth();
-  const [players, setPlayers] = useState([]);
+  const [roster, setRoster] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [pick, setPick] = useState({});          // user_id -> team_id chosen in the assign dropdown
+  const [assigning, setAssigning] = useState('');
   const [form, setForm] = useState({ name: '', team_id: '', position: '', dob: '', medical: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
   const [lastCode, setLastCode] = useState('');
 
   async function load() {
-    const [{ data: pl }, { data: tm }] = await Promise.all([
-      supabase.from('players').select('id,position,date_of_birth,rank_level,child_code,teams(name,division)').order('created_at', { ascending: false }),
+    const [{ data: rp }, { data: tm }] = await Promise.all([
+      supabase.rpc('admin_list_players'),
       supabase.from('teams').select('id,name,division').order('division'),
     ]);
-    setPlayers(pl || []);
+    setRoster(rp || []);
     setTeams(tm || []);
   }
   useEffect(() => { if (!session?.demo) load(); }, []);
 
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
 
+  async function assign(userId) {
+    const teamId = pick[userId];
+    if (!teamId) return;
+    setAssigning(userId); setErr(''); setMsg('');
+    try {
+      const { error } = await supabase.rpc('admin_assign_player', { p_user_id: userId, p_team_id: teamId });
+      if (error) { setErr(error.message); return; }
+      setMsg('Player assigned to a team.');
+      await load();
+    } finally { setAssigning(''); }
+  }
+
   async function addPlayer(e) {
     e.preventDefault(); setErr(''); setBusy(true);
     try {
       const child_code = genCode();
-      // Create the user row for the player, then the player profile.
       const { data: u, error: ue } = await supabase.from('users')
         .insert({ name: form.name, email: `${child_code.toLowerCase()}@player.pitchiq.local`, role: 'player' })
         .select().single();
@@ -51,17 +65,47 @@ export default function AdminPlayers() {
   }
 
   const noOrg = !session?.demo && profile && !profile.org_id;
+  const pending = roster.filter((r) => r.needs_team);
+  const assigned = roster.filter((r) => !r.needs_team);
 
   return (
     <AppShell role="admin" active="Players" title="Players">
-      {session?.demo && <div className="badge badge-success" style={{ marginBottom: 16 }}>Demo mode — sign in with a real admin to save players</div>}
+      {session?.demo && <div className="badge badge-success" style={{ marginBottom: 16 }}>Demo mode — sign in with a real admin to manage players</div>}
       {noOrg && <div className="card" style={{ marginBottom: 16 }}>Create your academy on the Dashboard first.</div>}
+      {msg && <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid var(--success)' }}>{msg}</div>}
       {lastCode && <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid var(--green-600)' }}>
         Player created. Child code for the parent to link: <strong>{lastCode}</strong></div>}
+      {err && <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid var(--danger)', color: 'var(--danger)' }}>{err}</div>}
+
+      {/* New registrations awaiting a team */}
+      <div className="card" style={{ marginBottom: 16, borderLeft: pending.length ? '4px solid var(--energy)' : undefined }}>
+        <div className="section-header">
+          <h4 style={{ margin: 0 }}>New registrations — awaiting a team</h4>
+          <span className={`badge ${pending.length ? 'badge-warning' : 'badge-neutral'}`}>{pending.length}</span>
+        </div>
+        {pending.length === 0
+          ? <p className="subtle" style={{ margin: 0 }}>Everyone who registered has been assigned to a team. 🎉</p>
+          : <table className="table"><thead><tr><th>Name</th><th>Email</th><th>Assign to team</th><th></th></tr></thead>
+              <tbody>{pending.map((r) => (
+                <tr key={r.user_id}>
+                  <td><span className="row"><span className="avatar">{(r.name || '?').split(' ').map((w)=>w[0]).join('').slice(0,2)}</span> {r.name || '—'}</span></td>
+                  <td className="subtle">{r.email}</td>
+                  <td>
+                    <select className="select" value={pick[r.user_id] || ''} onChange={(e) => setPick((p) => ({ ...p, [r.user_id]: e.target.value }))}>
+                      <option value="">— Choose team —</option>
+                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.division.replace('_',' ')})</option>)}
+                    </select>
+                  </td>
+                  <td><button className="btn btn-primary" style={{ minHeight: 38 }} disabled={!pick[r.user_id] || assigning === r.user_id} onClick={() => assign(r.user_id)}>
+                    {assigning === r.user_id ? 'Assigning…' : 'Assign'}</button></td>
+                </tr>
+              ))}</tbody>
+            </table>}
+      </div>
 
       <div className="grid grid-2" style={{ alignItems: 'start' }}>
         <div className="card">
-          <h4>Add a player</h4>
+          <h4>Add a player manually</h4>
           <form onSubmit={addPlayer}>
             <div className="field"><label className="label">Full name</label>
               <input className="input" value={form.name} onChange={(e) => set('name', e.target.value)} /></div>
@@ -76,22 +120,21 @@ export default function AdminPlayers() {
               <input className="input" type="date" value={form.dob} onChange={(e) => set('dob', e.target.value)} /></div>
             <div className="field"><label className="label">Medical notes (optional)</label>
               <textarea className="textarea" value={form.medical} onChange={(e) => set('medical', e.target.value)} /></div>
-            {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</p>}
             <button className="btn btn-primary btn-block" disabled={busy || !form.name.trim() || noOrg}>{busy ? 'Saving…' : 'Add player'}</button>
           </form>
         </div>
 
         <div className="card">
-          <div className="section-header"><h4 style={{ margin: 0 }}>Players</h4><span className="badge badge-neutral">{players.length}</span></div>
-          {players.length === 0
-            ? <p className="subtle">No players yet.</p>
-            : <table className="table"><thead><tr><th>Team</th><th>Position</th><th>Rank</th><th>Child code</th></tr></thead>
-                <tbody>{players.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.teams ? `${p.teams.name}` : '—'}</td>
-                    <td>{p.position || '—'}</td>
+          <div className="section-header"><h4 style={{ margin: 0 }}>Assigned players</h4><span className="badge badge-neutral">{assigned.length}</span></div>
+          {assigned.length === 0
+            ? <p className="subtle">No players assigned to a team yet.</p>
+            : <table className="table"><thead><tr><th>Name</th><th>Email</th><th>Team</th><th>Rank</th></tr></thead>
+                <tbody>{assigned.map((p) => (
+                  <tr key={p.user_id}>
+                    <td>{p.name || '—'}</td>
+                    <td className="subtle">{p.email}</td>
+                    <td>{p.team_name || '—'}</td>
                     <td><span className="badge badge-neutral">{(p.rank_level || 'Rookie').replace('_',' ')}</span></td>
-                    <td><code>{p.child_code}</code></td>
                   </tr>
                 ))}</tbody>
               </table>}
