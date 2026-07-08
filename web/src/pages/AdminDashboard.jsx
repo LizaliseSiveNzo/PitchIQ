@@ -81,32 +81,76 @@ function CreateAcademy({ onDone }) {
 
 // ---- Live dashboard for real accounts ----
 function LiveDashboard() {
-  const { profile } = useAuth();
-  const [counts, setCounts] = useState({ players: 0, teams: 0 });
+  const [counts, setCounts] = useState({ teams: 0 });
+  const [roster, setRoster] = useState([]);
 
   async function load() {
-    const [{ count: players }, { count: teams }] = await Promise.all([
-      supabase.from('players').select('*', { count: 'exact', head: true }),
+    const [{ count: teams }, { data: rp }] = await Promise.all([
       supabase.from('teams').select('*', { count: 'exact', head: true }),
+      supabase.rpc('admin_list_players'),
     ]);
-    setCounts({ players: players || 0, teams: teams || 0 });
+    setCounts({ teams: teams || 0 });
+    setRoster(rp || []);
   }
   useEffect(() => { load(); }, []);
+
+  const assigned = roster.filter((r) => !r.needs_team);
+  const pending = roster.filter((r) => r.needs_team);
+
+  // group assigned players by team name
+  const byTeam = assigned.reduce((acc, p) => {
+    const key = p.team_name || 'Unnamed team';
+    (acc[key] = acc[key] || []).push(p);
+    return acc;
+  }, {});
+  const teamNames = Object.keys(byTeam).sort();
 
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 16 }}>
-        <StatCard label="Total players" value={counts.players} />
+        <StatCard label="Total players" value={roster.length} />
+        <StatCard label="Assigned to a team" value={assigned.length} />
+        <StatCard label="Awaiting a team" value={pending.length} />
         <StatCard label="Teams" value={counts.teams} />
-        <StatCard label="Avg attendance" value="—" />
-        <StatCard label="Trial pipeline" value="—" />
       </div>
+
+      {pending.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid var(--energy)' }}>
+          <div className="row between">
+            <div><strong>{pending.length} new registration{pending.length === 1 ? '' : 's'}</strong> waiting to be assigned to a team.</div>
+            <Link to="/admin/players" className="btn btn-primary" style={{ minHeight: 38 }}>Assign now</Link>
+          </div>
+        </div>
+      )}
+
       <div className="card">
-        <div className="section-header"><h4 style={{ margin: 0 }}>Get started</h4></div>
-        <p>Build out your academy structure, then start logging stats (Phase 3).</p>
-        <div className="row" style={{ gap: 10 }}>
-          <Link to="/admin/teams" className="btn btn-primary">Manage teams</Link>
-          <Link to="/admin/players" className="btn btn-secondary">Add players</Link>
+        <div className="section-header">
+          <h4 style={{ margin: 0 }}>Assigned players</h4>
+          <span className="badge badge-neutral">{assigned.length}</span>
+        </div>
+        {assigned.length === 0
+          ? <p className="subtle" style={{ margin: 0 }}>No players are assigned to a team yet. <Link to="/admin/players">Assign registrations →</Link></p>
+          : teamNames.map((tn) => (
+              <div key={tn} style={{ marginTop: 14 }}>
+                <div className="row between" style={{ marginBottom: 6 }}>
+                  <strong>{tn}</strong>
+                  <span className="badge badge-neutral">{byTeam[tn].length}</span>
+                </div>
+                <table className="table"><thead><tr><th>Name</th><th>Email</th><th>Position</th><th>Rank</th></tr></thead>
+                  <tbody>{byTeam[tn].map((p) => (
+                    <tr key={p.user_id}>
+                      <td><span className="row"><span className="avatar">{(p.name || '?').split(' ').map((w)=>w[0]).join('').slice(0,2)}</span> {p.name || '—'}</span></td>
+                      <td className="subtle">{p.email}</td>
+                      <td>{p.play_position || '—'}</td>
+                      <td><span className="badge badge-neutral">{(p.rank_level || 'Rookie').replace('_',' ')}</span></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ))}
+        <div className="row" style={{ gap: 10, marginTop: 16 }}>
+          <Link to="/admin/teams" className="btn btn-secondary">Manage teams</Link>
+          <Link to="/admin/players" className="btn btn-primary">Manage players</Link>
         </div>
       </div>
     </>
