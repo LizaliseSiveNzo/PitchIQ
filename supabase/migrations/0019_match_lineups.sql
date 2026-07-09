@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Match lineups: coach picks starters + bench per match
 create table if not exists match_lineups (
   id uuid primary key default gen_random_uuid(),

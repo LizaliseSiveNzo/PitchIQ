@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 

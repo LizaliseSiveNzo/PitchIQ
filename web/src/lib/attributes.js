@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 export const ATTR_GROUPS = [
   ['Pace', [['acceleration', 'Acceleration'], ['sprint_speed', 'Sprint Speed']]],
   ['Shooting', [['finishing', 'Finishing'], ['shot_power', 'Shot Power'], ['long_shots', 'Long Shots']]],

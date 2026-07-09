@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Let a coach create their own team (becomes its coach). Resolves/creates an org if needed.
 create or replace function create_coach_team(p_name text, p_division text, p_sport text default 'soccer')
 returns uuid language plpgsql security definer set search_path = public as $$

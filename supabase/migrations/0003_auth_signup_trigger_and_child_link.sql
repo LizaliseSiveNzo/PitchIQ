@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Phase 1 auth: auto-create profile on signup, self-read, parent child linking
 
 create policy users_read_self   on users for select using (id = auth.uid());

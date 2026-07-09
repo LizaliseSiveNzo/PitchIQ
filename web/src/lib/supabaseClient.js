@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 import { createClient } from '@supabase/supabase-js';
 
 export const supabase = createClient(

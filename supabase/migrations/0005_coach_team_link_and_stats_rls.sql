@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Phase 3: coaches own teams via teams.coach_id; scoped RLS for logging.
 alter table teams add column if not exists coach_id uuid references users(id) on delete set null;
 create index if not exists idx_teams_coach on teams(coach_id);

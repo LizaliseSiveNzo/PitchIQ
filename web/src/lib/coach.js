@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 import { supabase } from './supabaseClient.js';
 
 export async function myTeams(coachId) {

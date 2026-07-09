@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- FIFA-style player attributes + physical profile
 alter table players add column if not exists strong_foot text;
 alter table players add column if not exists weak_foot int check (weak_foot between 1 and 5);

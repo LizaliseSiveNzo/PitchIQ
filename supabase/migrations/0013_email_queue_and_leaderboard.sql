@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- 0013: Email notification queue + team leaderboard RPC
 -- (applied 2026-07-02; trigger pings the email-dispatch edge function via pg_net)
 

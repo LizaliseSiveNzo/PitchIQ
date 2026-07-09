@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Phase 7: gather a player's recent data for the AI summary (authz self/coach/admin)
 create or replace function player_ai_context(p_player uuid default null)
 returns json language plpgsql stable security definer set search_path = public as $$

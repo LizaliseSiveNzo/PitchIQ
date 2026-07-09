@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Injury & recovery discussion thread between a player and their coach (admin can view/post too)
 create table if not exists medical_notes (
   id          uuid primary key default gen_random_uuid(),

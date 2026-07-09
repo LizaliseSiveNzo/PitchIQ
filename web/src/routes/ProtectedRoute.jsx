@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 

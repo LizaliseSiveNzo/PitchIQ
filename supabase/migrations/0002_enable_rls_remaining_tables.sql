@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- PitchIQ — Enable RLS on remaining tables (security hardening)
 -- organisations, parent_player, trials were exposed to the anon key.
 -- Public trial lookups still work: the backend uses the service-role key (bypasses RLS).

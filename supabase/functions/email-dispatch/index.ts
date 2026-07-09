@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 // email-dispatch: flushes the notification email queue.
 // Sends every notifications row with emailed=false to the user's email via Resend,
 // then marks it emailed. Invoked automatically by a DB trigger (pg_net) whenever

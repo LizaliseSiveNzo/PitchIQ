@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 import { supabase } from './supabaseClient.js';
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';

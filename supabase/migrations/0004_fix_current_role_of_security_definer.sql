@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Prevent RLS recursion: current_role_of() reads users, and users' admin policy
 -- calls current_role_of(). SECURITY DEFINER makes it bypass RLS when reading the role.
 create or replace function current_role_of()

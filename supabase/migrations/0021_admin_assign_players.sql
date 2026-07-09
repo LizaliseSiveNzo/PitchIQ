@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Admin: list every player registration (incl. self-signups with no player row yet) + assign to a team.
 create or replace function admin_list_players()
 returns table(user_id uuid, player_id uuid, name text, email text, team_id uuid, team_name text, play_position text, rank_level text, child_code text, needs_team boolean)

@@ -1,3 +1,6 @@
+-- Copyright © 2026 Lizalise Nzo. All rights reserved.
+-- PitchIQ — proprietary and confidential. See LICENSE.
+
 -- Phase 6: trial QR check-in
 create policy trialreg_staff_update on trial_registrations for update
   using (current_role_of() in ('admin','coach'));

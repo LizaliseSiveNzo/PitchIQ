@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2026 Lizalise Nzo. All rights reserved.
+ * PitchIQ — proprietary and confidential. See LICENSE.
+ */
+
 // PitchIQ design tokens — light & institutional. Mirrors design-system.css.
 // Prefer the CSS variables in components; this is for JS-side use (charts, etc.).
 export const theme = {
