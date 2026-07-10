@@ -13,6 +13,8 @@ import { primeAudio, successBeep, errorBeep } from '../lib/sound.js';
 
 const isToday = (iso) => iso && new Date(iso).toDateString() === new Date().toDateString();
 const whenLabel = (s) => s.starts_at ? new Date(s.starts_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : (s.date || 'Session');
+const REASONS = ['Injury', 'Illness', 'Emergency', 'Family / personal', 'Fatigue', 'Other'];
+const first = (n = '') => n.split(' ')[0];
 
 export default function CoachLogTraining() {
   const { profile, session } = useAuth();
@@ -24,16 +26,24 @@ export default function CoachLogTraining() {
   const [notes, setNotes] = useState('');
   const [players, setPlayers] = useState([]);
   const [present, setPresent] = useState({});
-  const [locked, setLocked] = useState(new Set());  // checked-in players can't be marked absent
+  const [locked, setLocked] = useState(new Set());
+  const [leftEarly, setLeftEarly] = useState({});     // player_id -> reason
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
 
+  // per-player panel
+  const [editFor, setEditFor] = useState('');
+  const [leReason, setLeReason] = useState('Injury');
+  const [leNote, setLeNote] = useState('');
+  const [improve, setImprove] = useState('');
+  const [panelMsg, setPanelMsg] = useState('');
+
+  // scanner
   const [scanOpen, setScanOpen] = useState(false);
   const [manual, setManual] = useState('');
   const [scanMsg, setScanMsg] = useState(''); const [scanErr, setScanErr] = useState('');
   const playersRef = useRef([]);
   useEffect(() => { playersRef.current = players; }, [players]);
-
   const { videoRef, scanning, error: camErr, start, stop } = useQrScanner((val) => markPresentByCode(val));
 
   useEffect(() => { if (session?.demo) return; (async () => {
@@ -50,28 +60,15 @@ export default function CoachLogTraining() {
 
   async function selectSession(sid, plist) {
     const ps = plist || players;
-    setSessionSel(sid); setOk(''); setErr('');
-    if (sid === 'new') { setLocked(new Set()); setPresent(Object.fromEntries(ps.map((x) => [x.id, true]))); return; }
+    setSessionSel(sid); setOk(''); setErr(''); setEditFor('');
+    if (sid === 'new') { setLocked(new Set()); setLeftEarly({}); setPresent(Object.fromEntries(ps.map((x) => [x.id, true]))); return; }
     const { data } = await supabase.rpc('session_attendance', { p_session_id: sid });
     const lockedSet = new Set((data || []).filter((x) => x.checkin_at).map((x) => x.player_id));
+    const leMap = {}; (data || []).forEach((x) => { if (x.left_early) leMap[x.player_id] = x.left_reason || 'Left early'; });
     const map = {};
     ps.forEach((p) => { const r = (data || []).find((x) => x.player_id === p.id); map[p.id] = r ? !!r.present : false; });
     lockedSet.forEach((id) => { map[id] = true; });
-    setLocked(lockedSet);
-    setPresent(map);
-  }
-
-  async function removeSession(sid, e) {
-    if (e) e.stopPropagation();
-    if (!window.confirm('Delete this training session and its attendance? This cannot be undone.')) return;
-    setErr(''); setOk('');
-    const { error } = await supabase.rpc('delete_training_session', { p_session_id: sid });
-    if (error) { setErr(error.message); return; }
-    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
-      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
-    setSessions(data || []);
-    if (sessionSel === sid) selectSession('new');
-    setOk('Training session deleted.');
+    setLocked(lockedSet); setLeftEarly(leMap); setPresent(map);
   }
 
   function markPresentByCode(raw) {
@@ -86,7 +83,57 @@ export default function CoachLogTraining() {
     try { navigator.vibrate?.(60); } catch (_e) {}
   }
   function onManual(e) { e.preventDefault(); if (!manual.trim()) return; markPresentByCode(manual); setManual(''); }
-  function toggleScanner() { const next = !scanOpen; setScanOpen(next); setScanMsg(''); setScanErr(''); if (next) start(); else stop(); }
+  function toggleScanner() { const next = !scanOpen; setScanOpen(next); setScanMsg(''); setScanErr(''); if (next) { primeAudio(); start(); } else stop(); }
+
+  async function ensureSession() {
+    if (sessionSel !== 'new') return sessionSel;
+    const { data: ts, error } = await supabase.from('training_sessions')
+      .insert({ team_id: teamId, coach_id: profile.id, date, notes }).select().single();
+    if (error) throw error;
+    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
+      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
+    setSessions(data || []); setSessionSel(ts.id);
+    return ts.id;
+  }
+
+  async function markLeftEarly(p) {
+    setPanelMsg(''); setErr('');
+    const reason = leReason === 'Other' ? (leNote.trim() || 'Other') : (leNote.trim() ? `${leReason} — ${leNote.trim()}` : leReason);
+    let sid;
+    try { sid = await ensureSession(); } catch (e) { setErr(e.message || String(e)); return; }
+    const { error } = await supabase.rpc('record_left_early', { p_session_id: sid, p_player_id: p.id, p_reason: reason });
+    if (error) { setErr(error.message); return; }
+    setLeftEarly((m) => ({ ...m, [p.id]: reason }));
+    setPresent((s) => ({ ...s, [p.id]: true }));
+    setLocked((prev) => { const n = new Set(prev); n.add(p.id); return n; });
+    setLeNote(''); setPanelMsg(`${first(p.name)} marked left early — still counts as present.`);
+  }
+  async function undoLeftEarly(p) {
+    if (sessionSel === 'new') return;
+    await supabase.rpc('clear_left_early', { p_session_id: sessionSel, p_player_id: p.id });
+    setLeftEarly((m) => { const n = { ...m }; delete n[p.id]; return n; });
+    setPanelMsg('Left-early cleared.');
+  }
+  async function sendNote(p) {
+    setPanelMsg(''); setErr('');
+    const { error } = await supabase.rpc('add_coach_note', { p_player_id: p.id, p_note: improve.trim() });
+    if (error) { setErr(error.message); return; }
+    setImprove('');
+    setPanelMsg(`Note sent to ${first(p.name)} — it’ll appear on their profile.`);
+  }
+
+  async function removeSession(sid, e) {
+    if (e) e.stopPropagation();
+    if (!window.confirm('Delete this training session and its attendance? This cannot be undone.')) return;
+    setErr(''); setOk('');
+    const { error } = await supabase.rpc('delete_training_session', { p_session_id: sid });
+    if (error) { setErr(error.message); return; }
+    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
+      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
+    setSessions(data || []);
+    if (sessionSel === sid) selectSession('new');
+    setOk('Training session deleted.');
+  }
 
   async function save(e) {
     e.preventDefault(); setErr(''); setOk(''); setBusy(true);
@@ -129,17 +176,14 @@ export default function CoachLogTraining() {
           <p className="subtle" style={{ marginTop: 0, fontSize: 13 }}>Tap the session that’s happening now to log its attendance.</p>
           <div className="stack" style={{ gap: 8 }}>
             <div onClick={() => selectSession('new')} role="button" tabIndex={0}
-              style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                border: sessionSel === 'new' ? '2px solid var(--green-600)' : '1px solid var(--border)' }}>
+              style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: sessionSel === 'new' ? '2px solid var(--green-600)' : '1px solid var(--border)' }}>
               <strong>➕ New session (not scheduled)</strong>
             </div>
             {sessions.map((s) => {
               const sel = sessionSel === s.id; const today = isToday(s.starts_at);
               return (
                 <div key={s.id} onClick={() => selectSession(s.id)} role="button" tabIndex={0}
-                  style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                    border: sel ? '2px solid var(--green-600)' : '1px solid var(--border)',
-                    background: today ? 'var(--surface-2)' : 'var(--surface)' }}>
+                  style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: sel ? '2px solid var(--green-600)' : '1px solid var(--border)', background: today ? 'var(--surface-2)' : 'var(--surface)' }}>
                   <div className="row between">
                     <div>
                       <strong>{s.notes || 'Training'}</strong>
@@ -170,6 +214,7 @@ export default function CoachLogTraining() {
               {scanOpen ? 'Close scanner' : '📷 Scan present'}
             </button>
           </div>
+          <p className="subtle" style={{ marginTop: 0, fontSize: 12 }}>Tap a player’s name to mark them left early or send a training note.</p>
 
           {scanOpen && (
             <div className="card" style={{ background: 'var(--surface-2)', border: 0, marginBottom: 12 }}>
@@ -193,17 +238,53 @@ export default function CoachLogTraining() {
           )}
 
           <div className="stack" style={{ gap: 8 }}>
-            {players.map((p) => (
-              <label key={p.id} className="row between" style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer' }}>
-                <span className="row"><span className="avatar">{p.name.split(' ').map((w)=>w[0]).join('')}</span> {p.name}</span>
-                <span className="row" style={{ gap: 8 }}>
-                  {locked.has(p.id) && <span className="badge badge-neutral" title="Checked in via QR / code — locked present">🔒 Checked in</span>}
-                  <span className={`badge ${present[p.id] ? 'badge-success' : 'badge-danger'}`}>{present[p.id] ? 'Present' : 'Absent'}</span>
-                  <input type="checkbox" checked={!!present[p.id]} disabled={locked.has(p.id)}
-                    onChange={(e) => setPresent((s) => ({ ...s, [p.id]: e.target.checked }))} />
-                </span>
-              </label>
-            ))}
+            {players.map((p) => {
+              const le = leftEarly[p.id];
+              return (
+                <div key={p.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px' }}>
+                  <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
+                    <button type="button" className="row" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0, minWidth: 140, textAlign: 'left' }}
+                      onClick={() => { setEditFor(editFor === p.id ? '' : p.id); setPanelMsg(''); setLeReason('Injury'); setLeNote(''); setImprove(''); }}>
+                      <span className="avatar">{p.name.split(' ').map((w)=>w[0]).join('')}</span>
+                      <span style={{ fontWeight: 600, textDecoration: 'underline' }}>{p.name}</span>
+                    </button>
+                    <span className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                      {le && <span className="badge badge-warning">Left early{le && le !== true ? `: ${le}` : ''}</span>}
+                      {locked.has(p.id) && <span className="badge badge-neutral" title="Checked in — locked present">🔒</span>}
+                      <span className={`badge ${present[p.id] ? 'badge-success' : 'badge-danger'}`}>{present[p.id] ? 'Present' : 'Absent'}</span>
+                      <input type="checkbox" checked={!!present[p.id]} disabled={locked.has(p.id)}
+                        onChange={(e) => setPresent((s) => ({ ...s, [p.id]: e.target.checked }))} />
+                    </span>
+                  </div>
+
+                  {editFor === p.id && (
+                    <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                      <div className="row between"><strong style={{ fontSize: 13 }}>🚪 Left early</strong>
+                        {le && <button type="button" className="btn btn-ghost" style={{ minHeight: 28 }} onClick={() => undoLeftEarly(p)}>Undo</button>}</div>
+                      <div className="row" style={{ gap: 8, marginTop: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                        <div className="field" style={{ margin: 0, minWidth: 150 }}>
+                          <label className="label" style={{ fontSize: 12 }}>Reason</label>
+                          <select className="select" value={leReason} onChange={(e) => setLeReason(e.target.value)}>
+                            {REASONS.map((x) => <option key={x} value={x}>{x}</option>)}</select>
+                        </div>
+                        <input className="input" style={{ flex: 1, minWidth: 140 }} placeholder={leReason === 'Other' ? 'Describe reason' : 'Add detail (optional)'}
+                          value={leNote} onChange={(e) => setLeNote(e.target.value)} />
+                        <button type="button" className="btn btn-secondary" style={{ minHeight: 38 }} onClick={() => markLeftEarly(p)}>Mark left early</button>
+                      </div>
+                      <p className="subtle" style={{ fontSize: 12, margin: '6px 0 0' }}>Left-early players still count as present — attendance score isn’t affected.</p>
+
+                      <div style={{ marginTop: 14 }}>
+                        <strong style={{ fontSize: 13 }}>📝 Training note for {first(p.name)}</strong>
+                        <textarea className="textarea" rows={3} style={{ marginTop: 6 }} value={improve} onChange={(e) => setImprove(e.target.value)}
+                          placeholder="What can they improve on? This is sent to the player’s profile." />
+                        <button type="button" className="btn btn-primary" style={{ minHeight: 38 }} onClick={() => sendNote(p)} disabled={!improve.trim()}>Send note to player</button>
+                      </div>
+                      {panelMsg && <p style={{ color: 'var(--green-700)', fontSize: 13, marginTop: 8 }}>{panelMsg}</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {players.length === 0 && <p className="subtle">No players on this team yet.</p>}
           </div>
 
