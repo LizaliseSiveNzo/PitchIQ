@@ -184,3 +184,18 @@ html { -webkit-text-size-adjust: 100%; }
   .tabbar { display: none !important; }
   .app .content { padding-bottom: 24px; }
 }
+
+/* ===================== Larger navigation ===================== */
+:root { --sidebar-w: 280px; }
+.sidebar { padding: 20px 16px; }
+.sidebar .brand { font-size: 22px; padding: 10px 12px 22px; }
+.nav-item { font-size: 16px; padding: 14px 14px; gap: 14px; border-radius: 12px; }
+.nav-item span:first-child { font-size: 20px; width: 24px !important; }
+
+/* Bigger mobile dropdown items too */
+@media (max-width: 767px) {
+  .mobile-menu a, .mobile-menu .m-item { font-size: 17px; padding: 16px 18px; }
+  .mobile-menu a span:first-child, .mobile-menu .m-item span:first-child { font-size: 22px; }
+  .hamburger-bars { width: 26px; gap: 5px; }
+  .hamburger-bars i { height: 3px; }
+}
