@@ -8,6 +8,7 @@ import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { myTeams, teamPlayers } from '../lib/coach.js';
+import { useQrScanner } from '../lib/useQrScanner.js';
 
 const isToday = (iso) => iso && new Date(iso).toDateString() === new Date().toDateString();
 const whenLabel = (s) => s.starts_at ? new Date(s.starts_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : (s.date || 'Session');
@@ -16,7 +17,7 @@ export default function CoachLogTraining() {
   const { profile, session } = useAuth();
   const [teams, setTeams] = useState([]);
   const [teamId, setTeamId] = useState('');
-  const [sessions, setSessions] = useState([]);   // scheduled practices
+  const [sessions, setSessions] = useState([]);
   const [sessionSel, setSessionSel] = useState('new');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
@@ -25,29 +26,23 @@ export default function CoachLogTraining() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
 
-  // scanner state
   const [scanOpen, setScanOpen] = useState(false);
-  const [scanning, setScanning] = useState(false);
   const [manual, setManual] = useState('');
   const [scanMsg, setScanMsg] = useState(''); const [scanErr, setScanErr] = useState('');
-  const supported = typeof window !== 'undefined' && 'BarcodeDetector' in window;
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const runningRef = useRef(false);
-  const lastScanRef = useRef({ code: '', t: 0 });
   const playersRef = useRef([]);
   useEffect(() => { playersRef.current = players; }, [players]);
 
+  const { videoRef, scanning, error: camErr, start, stop } = useQrScanner((val) => markPresentByCode(val));
+
   useEffect(() => { if (session?.demo) return; (async () => {
     const t = await myTeams(profile.id); setTeams(t); if (t[0]) setTeamId(t[0].id);
-  })(); return stopCam; }, []);
+  })(); return stop; }, []);
 
   useEffect(() => { if (!teamId) return; (async () => {
     const p = await teamPlayers(teamId); setPlayers(p);
     const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
       .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
     setSessions(data || []);
-    // auto-select today's session if there is one, else start on "new"
     const todays = (data || []).find((s) => isToday(s.starts_at));
     if (todays) selectSession(todays.id, p); else selectSession('new', p);
   })(); }, [teamId]);
@@ -72,38 +67,7 @@ export default function CoachLogTraining() {
     try { navigator.vibrate?.(60); } catch (_e) {}
   }
   function onManual(e) { e.preventDefault(); if (!manual.trim()) return; markPresentByCode(manual); setManual(''); }
-
-  async function startCam() {
-    setScanErr('');
-    if (!supported) { setScanErr('Camera scanning isn’t supported on this browser — use the code box below.'); return; }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream;
-      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
-      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      runningRef.current = true; setScanning(true);
-      const loop = async () => {
-        if (!runningRef.current || !videoRef.current) return;
-        try {
-          const codes = await detector.detect(videoRef.current);
-          if (codes && codes[0]?.rawValue) {
-            const val = codes[0].rawValue.trim();
-            const now = Date.now();
-            if (!(val === lastScanRef.current.code && now - lastScanRef.current.t < 2500)) {
-              lastScanRef.current = { code: val, t: now }; markPresentByCode(val);
-            }
-          }
-        } catch (_e) { /* frame noise */ }
-        if (runningRef.current) requestAnimationFrame(loop);
-      };
-      requestAnimationFrame(loop);
-    } catch (e) { setScanErr('Camera error: ' + (e.message || e)); }
-  }
-  function stopCam() {
-    runningRef.current = false; setScanning(false);
-    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
-  }
-  function toggleScanner() { const next = !scanOpen; setScanOpen(next); setScanMsg(''); setScanErr(''); if (!next) stopCam(); }
+  function toggleScanner() { const next = !scanOpen; setScanOpen(next); setScanMsg(''); setScanErr(''); if (next) start(); else stop(); }
 
   async function save(e) {
     e.preventDefault(); setErr(''); setOk(''); setBusy(true);
@@ -121,9 +85,8 @@ export default function CoachLogTraining() {
         if (e2) { setErr(e2.message); return; }
       }
       await supabase.rpc('recompute_team_ranks', { p_team: teamId });
-      stopCam(); setScanOpen(false);
+      stop(); setScanOpen(false);
       setOk(`Saved — ${rows.filter((r) => r.attended).length}/${rows.length} present. Ranks updated.`);
-      // refresh session list so a brand-new session appears
       const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
         .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
       setSessions(data || []); setSessionSel(sid); setNotes('');
@@ -140,7 +103,7 @@ export default function CoachLogTraining() {
       <div className="container" style={{ maxWidth: 640, padding: 0 }}>
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="field" style={{ margin: 0 }}><label className="label">Team</label>
-            <select className="select" value={teamId} onChange={(e) => { stopCam(); setScanOpen(false); setTeamId(e.target.value); }}>
+            <select className="select" value={teamId} onChange={(e) => { stop(); setScanOpen(false); setTeamId(e.target.value); }}>
               {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
 
           <div className="section-header" style={{ marginTop: 14 }}><h4 style={{ margin: 0 }}>Scheduled sessions</h4><span className="badge badge-neutral">{sessions.length}</span></div>
@@ -188,21 +151,20 @@ export default function CoachLogTraining() {
             <div className="card" style={{ background: 'var(--surface-2)', border: 0, marginBottom: 12 }}>
               <div className="row between" style={{ marginBottom: 8 }}>
                 <strong style={{ fontSize: 13 }}>Scan a player’s QR, or type their student code</strong>
-                {scanning ? <button type="button" className="btn btn-ghost" style={{ minHeight: 30 }} onClick={stopCam}>Stop camera</button>
-                          : <button type="button" className="btn btn-secondary" style={{ minHeight: 30 }} onClick={startCam}>Start camera</button>}
+                {scanning ? <button type="button" className="btn btn-ghost" style={{ minHeight: 30 }} onClick={stop}>Stop camera</button>
+                          : <button type="button" className="btn btn-secondary" style={{ minHeight: 30 }} onClick={start}>Start camera</button>}
               </div>
               <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000', display: scanning ? 'block' : 'none' }}>
                 <video ref={videoRef} playsInline muted style={{ width: '100%', maxHeight: 300, objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: '18% 22%', border: '3px solid rgba(255,255,255,.9)', borderRadius: 12 }} />
               </div>
-              {!supported && <p className="subtle" style={{ fontSize: 12, margin: '4px 0 0' }}>This browser can’t scan QR codes — use the code box below.</p>}
               <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                 <input className="input" style={{ flex: 1, minWidth: 150 }} placeholder="Student code, e.g. PIQ-EAG3"
                   value={manual} onChange={(e) => setManual(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') onManual(e); }} />
                 <button type="button" className="btn btn-secondary" onClick={onManual} disabled={!manual.trim()}>Mark present</button>
               </div>
               {scanMsg && <p style={{ color: 'var(--green-700)', fontSize: 14, margin: '10px 0 0', fontWeight: 600 }}>{scanMsg}</p>}
-              {scanErr && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '10px 0 0' }}>{scanErr}</p>}
+              {(scanErr || camErr) && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '10px 0 0' }}>{scanErr || camErr}</p>}
             </div>
           )}
 
