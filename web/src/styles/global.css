@@ -228,3 +228,17 @@ html { -webkit-text-size-adjust: 100%; }
   /* long unbroken text (emails, codes) wraps instead of forcing width */
   .subtle, td, .card { overflow-wrap: anywhere; }
 }
+
+/* ===================== Navigation — 50% smaller (half of the enlarged size) ===================== */
+:root { --sidebar-w: 170px; }
+.sidebar { padding: 13px 9px; }
+.sidebar .brand { font-size: 15px; padding: 7px 8px 14px; }
+.nav-item { font-size: 12px; padding: 10px 10px; gap: 9px; border-radius: 8px; }
+.nav-item span:first-child { font-size: 15px; width: 18px !important; }
+
+@media (max-width: 767px) {
+  .mobile-menu a, .mobile-menu .m-item { font-size: 12px; padding: 11px 12px; }
+  .mobile-menu a span:first-child, .mobile-menu .m-item span:first-child { font-size: 15px; }
+  .hamburger-bars { width: 18px; gap: 4px; }
+  .hamburger-bars i { height: 2px; }
+}
