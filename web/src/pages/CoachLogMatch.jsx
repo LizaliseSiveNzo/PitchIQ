@@ -9,7 +9,21 @@ import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { myTeams, teamPlayers } from '../lib/coach.js';
 
-const blank = () => ({ minutes: 0, goals: 0, assists: 0, rating: '' });
+const FIELDS = [
+  'minutes','goals','assists','shots','shots_on_target','key_passes',
+  'passes_completed','passes_attempted','ball_carries','dribbles',
+  'tackles','interceptions','clearances','blocks','saves','fouls_won','fouls_committed',
+];
+const blank = () => { const o = { rating: '' }; FIELDS.forEach((f) => o[f] = 0); return o; };
+
+// detailed stats shown under the "More" expander, grouped
+const EXTRA = [
+  ['shots','Shots'], ['shots_on_target','On target'], ['key_passes','Key passes'],
+  ['passes_completed','Passes completed'], ['passes_attempted','Passes attempted'],
+  ['ball_carries','Ball carries'], ['dribbles','Dribbles'],
+  ['tackles','Tackles'], ['interceptions','Interceptions'], ['clearances','Clearances'], ['blocks','Blocks'],
+  ['saves','Saves'], ['fouls_won','Fouls won'], ['fouls_committed','Fouls committed'],
+];
 
 export default function CoachLogMatch() {
   const { profile, session } = useAuth();
@@ -20,6 +34,7 @@ export default function CoachLogMatch() {
   const [result, setResult] = useState('');
   const [players, setPlayers] = useState([]);
   const [stats, setStats] = useState({});
+  const [open, setOpen] = useState({});     // player_id -> details expanded
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
@@ -33,6 +48,7 @@ export default function CoachLogMatch() {
   })(); }, [teamId]);
 
   function setStat(pid, k, v) { setStats((s) => ({ ...s, [pid]: { ...s[pid], [k]: v } })); }
+  const num = (pid, k) => Number(stats[pid]?.[k]) || 0;
 
   async function save(e) {
     e.preventDefault(); setErr(''); setOk(''); setBusy(true);
@@ -42,20 +58,30 @@ export default function CoachLogMatch() {
       if (error) { setErr(error.message); return; }
       const rows = players.map((p) => ({
         match_id: match.id, player_id: p.id,
-        minutes_played: Number(stats[p.id]?.minutes) || 0,
-        goals: Number(stats[p.id]?.goals) || 0,
-        assists: Number(stats[p.id]?.assists) || 0,
+        minutes_played: num(p.id, 'minutes'),
         rating: stats[p.id]?.rating === '' ? null : Number(stats[p.id].rating),
+        goals: num(p.id, 'goals'), assists: num(p.id, 'assists'),
+        shots: num(p.id, 'shots'), shots_on_target: num(p.id, 'shots_on_target'), key_passes: num(p.id, 'key_passes'),
+        passes_completed: num(p.id, 'passes_completed'), passes_attempted: num(p.id, 'passes_attempted'),
+        ball_carries: num(p.id, 'ball_carries'), dribbles: num(p.id, 'dribbles'),
+        tackles: num(p.id, 'tackles'), interceptions: num(p.id, 'interceptions'),
+        clearances: num(p.id, 'clearances'), blocks: num(p.id, 'blocks'),
+        saves: num(p.id, 'saves'), fouls_won: num(p.id, 'fouls_won'), fouls_committed: num(p.id, 'fouls_committed'),
       }));
       const { error: e2 } = await supabase.from('player_match_stats').insert(rows);
       if (e2) { setErr(e2.message); return; }
       await supabase.rpc('recompute_team_ranks', { p_team: teamId });
-      setOk('Match logged. Ranks updated.');
+      setOk('Match logged. Ranks & leaderboards updated.');
     } finally { setBusy(false); }
   }
 
   if (session?.demo) return <AppShell role="coach" active="Log Match" title="Log Match"><div className="card">Demo mode — sign in as a real coach to log a match.</div></AppShell>;
   if (teams.length === 0) return <AppShell role="coach" active="Log Match" title="Log Match"><div className="card">No teams assigned yet.</div></AppShell>;
+
+  const numInput = (pid, k, w = 64) => (
+    <input className="input" type="number" min="0" style={{ minHeight: 34, width: w, padding: '4px 8px' }}
+      value={stats[pid]?.[k] ?? 0} onChange={(e) => setStat(pid, k, e.target.value)} />
+  );
 
   return (
     <AppShell role="coach" active="Log Match" title="Log Match">
@@ -73,23 +99,42 @@ export default function CoachLogMatch() {
         </div>
 
         <h4 style={{ marginTop: 8 }}>Player stats</h4>
+        <p className="subtle" style={{ marginTop: 0, fontSize: 13 }}>Enter the basics inline; tap “More stats” to record passing, ball carries, defending and goalkeeping.</p>
         {players.length === 0 ? <p className="subtle">No players on this team yet.</p> : (
-          <table className="table">
-            <thead><tr><th>Player</th><th>Min</th><th>Goals</th><th>Assists</th><th>Rating</th></tr></thead>
-            <tbody>{players.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td><input className="input" style={{ minHeight: 34, width: 70, padding: '4px 8px' }} type="number" value={stats[p.id]?.minutes ?? 0} onChange={(e) => setStat(p.id,'minutes',e.target.value)} /></td>
-                <td><input className="input" style={{ minHeight: 34, width: 60, padding: '4px 8px' }} type="number" value={stats[p.id]?.goals ?? 0} onChange={(e) => setStat(p.id,'goals',e.target.value)} /></td>
-                <td><input className="input" style={{ minHeight: 34, width: 60, padding: '4px 8px' }} type="number" value={stats[p.id]?.assists ?? 0} onChange={(e) => setStat(p.id,'assists',e.target.value)} /></td>
-                <td><input className="input" style={{ minHeight: 34, width: 70, padding: '4px 8px' }} type="number" step="0.1" min="0" max="5" placeholder="0-5" value={stats[p.id]?.rating ?? ''} onChange={(e) => setStat(p.id,'rating',e.target.value)} /></td>
-              </tr>))}</tbody>
-          </table>
+          <div className="stack" style={{ gap: 8 }}>
+            {players.map((p) => (
+              <div key={p.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+                <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
+                  <strong style={{ minWidth: 120 }}>{p.name}</strong>
+                  <div className="row" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <label className="row" style={{ gap: 4 }}><span className="subtle" style={{ fontSize: 12 }}>Min</span>{numInput(p.id,'minutes',64)}</label>
+                    <label className="row" style={{ gap: 4 }}><span className="subtle" style={{ fontSize: 12 }}>G</span>{numInput(p.id,'goals',52)}</label>
+                    <label className="row" style={{ gap: 4 }}><span className="subtle" style={{ fontSize: 12 }}>A</span>{numInput(p.id,'assists',52)}</label>
+                    <label className="row" style={{ gap: 4 }}><span className="subtle" style={{ fontSize: 12 }}>Rating</span>
+                      <input className="input" type="number" step="0.1" min="0" max="5" placeholder="0-5" style={{ minHeight: 34, width: 66, padding: '4px 8px' }}
+                        value={stats[p.id]?.rating ?? ''} onChange={(e) => setStat(p.id,'rating',e.target.value)} /></label>
+                    <button type="button" className="btn btn-ghost" style={{ minHeight: 30, padding: '4px 10px' }}
+                      onClick={() => setOpen((o) => ({ ...o, [p.id]: !o[p.id] }))}>{open[p.id] ? 'Less' : 'More stats'}</button>
+                  </div>
+                </div>
+                {open[p.id] && (
+                  <div className="grid grid-3" style={{ marginTop: 10, gap: 8 }}>
+                    {EXTRA.map(([k, lbl]) => (
+                      <label key={k} className="field" style={{ margin: 0 }}>
+                        <span className="label" style={{ fontSize: 12 }}>{lbl}</span>
+                        {numInput(p.id, k, '100%')}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
 
         {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</p>}
         {ok &&  <p style={{ color: 'var(--green-700)', fontSize: 13 }}>{ok}</p>}
-        <button className="btn btn-primary btn-lg btn-block" disabled={busy || !players.length || !opponent.trim()}>{busy ? 'Saving…' : 'Save match'}</button>
+        <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 12 }} disabled={busy || !players.length || !opponent.trim()}>{busy ? 'Saving…' : 'Save match'}</button>
       </form>
     </AppShell>
   );
