@@ -213,3 +213,18 @@ html { -webkit-text-size-adjust: 100%; }
   .hamburger-bars { width: 30px; gap: 6px; }
   .hamburger-bars i { height: 3px; }
 }
+
+/* ===================== Fix mobile zoom / horizontal overflow ===================== */
+/* Grid & flex children default to min-width:auto, letting wide content (tables, long
+   strings) stretch the column past the viewport, which makes mobile browsers zoom.
+   Forcing min-width:0 keeps everything within the screen. */
+.app-col, .content, .card { min-width: 0; }
+
+@media (max-width: 767px) {
+  html, body, #root, .app { max-width: 100vw; overflow-x: hidden; }
+  img, video { max-width: 100%; height: auto; }
+  /* any card containing a table scrolls internally instead of overflowing the page */
+  .card:has(.table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* long unbroken text (emails, codes) wraps instead of forcing width */
+  .subtle, td, .card { overflow-wrap: anywhere; }
+}
