@@ -4,14 +4,17 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { myTeams } from '../lib/coach.js';
 
+const isToday = (iso) => new Date(iso).toDateString() === new Date().toDateString();
+
 export default function CoachSchedule() {
   const { profile, session } = useAuth();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
   const [teamId, setTeamId] = useState('');
   const [upcoming, setUpcoming] = useState([]);
@@ -35,10 +38,12 @@ export default function CoachSchedule() {
   useEffect(() => { if (teamId) loadUpcoming(); }, [teamId]);
 
   async function loadUpcoming() {
-    const nowIso = new Date().toISOString();
+    // include everything from the start of today so same-day events stay visible for attendance
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    const fromIso = startToday.toISOString();
     const [{ data: matches }, { data: practices }] = await Promise.all([
-      supabase.from('matches').select('id,opponent,date,venue').eq('team_id', teamId).gte('date', nowIso),
-      supabase.from('training_sessions').select('id,starts_at,location,notes').eq('team_id', teamId).not('starts_at', 'is', null).gte('starts_at', nowIso),
+      supabase.from('matches').select('id,opponent,date,venue').eq('team_id', teamId).gte('date', fromIso),
+      supabase.from('training_sessions').select('id,starts_at,location,notes').eq('team_id', teamId).not('starts_at', 'is', null).gte('starts_at', fromIso),
     ]);
     const items = [
       ...(matches || []).map((m) => ({ id: 'm' + m.id, kind: 'match', rawId: m.id, type: 'Match', when: m.date, title: `vs ${m.opponent}`, where: m.venue })),
@@ -59,6 +64,11 @@ export default function CoachSchedule() {
       });
       setRsvps(map);
     } else setRsvps({});
+  }
+
+  function openLog(u) {
+    if (u.kind === 'practice') navigate(`/coach/checkin?session=${u.rawId}`);
+    else navigate(`/coach/lineup?match=${u.rawId}`);
   }
 
   async function addFixture(e) {
@@ -137,38 +147,46 @@ export default function CoachSchedule() {
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="section-header"><h4 style={{ margin: 0 }}>Upcoming</h4><span className="badge badge-neutral">{upcoming.length}</span></div>
+        <p className="subtle" style={{ marginTop: 0, fontSize: 13 }}>Tap a card to log attendance (training) or set the lineup (match).</p>
         {upcoming.length === 0 ? <p className="subtle">Nothing scheduled yet.</p> : (
           <div className="stack" style={{ gap: 10 }}>
-            {upcoming.map((u) => (
-              <div key={u.id} style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                <div className="row between">
-                  <div>
-                    <strong>{u.title}</strong>
-                    <div className="subtle" style={{ fontSize: 13 }}>{new Date(u.when).toLocaleString()}{u.where ? ` · ${u.where}` : ''}</div>
-                  </div>
-                  <span className={`badge ${u.type === 'Match' ? 'badge-info' : 'badge-success'}`}>{u.type}</span>
-                </div>
-                {u.type === 'Match' && <Link to={`/coach/lineup?match=${u.rawId}`} className="btn btn-secondary" style={{ minHeight: 30, padding: '4px 10px', marginTop: 6 }}>📋 Set lineup</Link>}
-                {u.type === 'Practice' && <Link to={`/coach/checkin?session=${u.rawId}`} className="btn btn-secondary" style={{ minHeight: 30, padding: '4px 10px', marginTop: 6 }}>✅ Take attendance</Link>}
-                {(() => {
-                  const r = rsvps[`${u.kind}:${u.rawId}`];
-                  if (!r) return <div className="subtle" style={{ fontSize: 12, marginTop: 6 }}>No availability responses yet.</div>;
-                  return (
-                    <div style={{ fontSize: 13, marginTop: 6 }}>
-                      <span className="badge badge-success" style={{ marginRight: 8 }}>✓ {r.going} going</span>
-                      {r.absent.length > 0 && (
-                        <span className="badge badge-warning">✗ {r.absent.length} out</span>
-                      )}
-                      {r.absent.map((a, i) => (
-                        <div key={i} className="subtle" style={{ fontSize: 12, marginTop: 4 }}>
-                          ✗ {a.name}{a.reason ? ` — ${a.reason}` : ''}
-                        </div>
-                      ))}
+            {upcoming.map((u) => {
+              const today = isToday(u.when);
+              return (
+                <div key={u.id} onClick={() => openLog(u)} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter') openLog(u); }}
+                  style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer',
+                    borderLeft: today ? '4px solid var(--energy)' : '1px solid var(--border)', background: today ? 'var(--surface-2)' : 'var(--surface)' }}>
+                  <div className="row between">
+                    <div>
+                      <strong>{u.title}</strong>
+                      <div className="subtle" style={{ fontSize: 13 }}>{new Date(u.when).toLocaleString()}{u.where ? ` · ${u.where}` : ''}</div>
                     </div>
-                  );
-                })()}
-              </div>
-            ))}
+                    <div className="row" style={{ gap: 6 }}>
+                      {today && <span className="badge badge-warning">Today</span>}
+                      <span className={`badge ${u.type === 'Match' ? 'badge-info' : 'badge-success'}`}>{u.type}</span>
+                    </div>
+                  </div>
+                  <div className="row between" style={{ marginTop: 6 }}>
+                    <span className="subtle" style={{ fontSize: 12 }}>{u.kind === 'practice' ? '✅ Tap to take attendance' : '📋 Tap to set lineup'}</span>
+                    <span className="subtle" style={{ fontSize: 16 }}>›</span>
+                  </div>
+                  {(() => {
+                    const r = rsvps[`${u.kind}:${u.rawId}`];
+                    if (!r) return null;
+                    return (
+                      <div style={{ fontSize: 13, marginTop: 6 }}>
+                        <span className="badge badge-success" style={{ marginRight: 8 }}>✓ {r.going} going</span>
+                        {r.absent.length > 0 && <span className="badge badge-warning">✗ {r.absent.length} out</span>}
+                        {r.absent.map((a, i) => (
+                          <div key={i} className="subtle" style={{ fontSize: 12, marginTop: 4 }}>✗ {a.name}{a.reason ? ` — ${a.reason}` : ''}</div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
