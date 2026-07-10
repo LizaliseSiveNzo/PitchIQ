@@ -10,19 +10,22 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { myTeams, teamPlayers } from '../lib/coach.js';
 
 const FIELDS = [
-  'minutes','goals','assists','shots','shots_on_target','key_passes',
+  'minutes','goals','assists','shots','shots_on_target','key_passes','crosses',
   'passes_completed','passes_attempted','ball_carries','dribbles',
-  'tackles','interceptions','clearances','blocks','saves','fouls_won','fouls_committed',
+  'tackles','interceptions','clearances','blocks','recoveries','aerials_won',
+  'saves','goals_conceded','fouls_won','fouls_committed','yellow_cards','red_cards',
 ];
-const blank = () => { const o = { rating: '' }; FIELDS.forEach((f) => o[f] = 0); return o; };
+const blank = () => { const o = { rating: '', clean_sheet: false }; FIELDS.forEach((f) => o[f] = 0); return o; };
 
-// detailed stats shown under the "More" expander, grouped
+// detailed stats shown under the "More" expander
 const EXTRA = [
-  ['shots','Shots'], ['shots_on_target','On target'], ['key_passes','Key passes'],
+  ['shots','Shots'], ['shots_on_target','On target'], ['key_passes','Key passes'], ['crosses','Crosses'],
   ['passes_completed','Passes completed'], ['passes_attempted','Passes attempted'],
   ['ball_carries','Ball carries'], ['dribbles','Dribbles'],
   ['tackles','Tackles'], ['interceptions','Interceptions'], ['clearances','Clearances'], ['blocks','Blocks'],
-  ['saves','Saves'], ['fouls_won','Fouls won'], ['fouls_committed','Fouls committed'],
+  ['recoveries','Recoveries'], ['aerials_won','Aerials won'],
+  ['saves','Saves'], ['goals_conceded','Goals conceded'],
+  ['fouls_won','Fouls won'], ['fouls_committed','Fouls committed'], ['yellow_cards','Yellow cards'], ['red_cards','Red cards'],
 ];
 
 export default function CoachLogMatch() {
@@ -34,7 +37,7 @@ export default function CoachLogMatch() {
   const [result, setResult] = useState('');
   const [players, setPlayers] = useState([]);
   const [stats, setStats] = useState({});
-  const [open, setOpen] = useState({});     // player_id -> details expanded
+  const [open, setOpen] = useState({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
@@ -56,18 +59,16 @@ export default function CoachLogMatch() {
       const { data: match, error } = await supabase.from('matches')
         .insert({ team_id: teamId, opponent, date, result }).select().single();
       if (error) { setErr(error.message); return; }
-      const rows = players.map((p) => ({
-        match_id: match.id, player_id: p.id,
-        minutes_played: num(p.id, 'minutes'),
-        rating: stats[p.id]?.rating === '' ? null : Number(stats[p.id].rating),
-        goals: num(p.id, 'goals'), assists: num(p.id, 'assists'),
-        shots: num(p.id, 'shots'), shots_on_target: num(p.id, 'shots_on_target'), key_passes: num(p.id, 'key_passes'),
-        passes_completed: num(p.id, 'passes_completed'), passes_attempted: num(p.id, 'passes_attempted'),
-        ball_carries: num(p.id, 'ball_carries'), dribbles: num(p.id, 'dribbles'),
-        tackles: num(p.id, 'tackles'), interceptions: num(p.id, 'interceptions'),
-        clearances: num(p.id, 'clearances'), blocks: num(p.id, 'blocks'),
-        saves: num(p.id, 'saves'), fouls_won: num(p.id, 'fouls_won'), fouls_committed: num(p.id, 'fouls_committed'),
-      }));
+      const rows = players.map((p) => {
+        const row = {
+          match_id: match.id, player_id: p.id,
+          minutes_played: num(p.id, 'minutes'),
+          rating: stats[p.id]?.rating === '' ? null : Number(stats[p.id].rating),
+          clean_sheet: !!stats[p.id]?.clean_sheet,
+        };
+        FIELDS.filter((f) => f !== 'minutes').forEach((f) => { row[f] = num(p.id, f); });
+        return row;
+      });
       const { error: e2 } = await supabase.from('player_match_stats').insert(rows);
       if (e2) { setErr(e2.message); return; }
       await supabase.rpc('recompute_team_ranks', { p_team: teamId });
@@ -99,7 +100,7 @@ export default function CoachLogMatch() {
         </div>
 
         <h4 style={{ marginTop: 8 }}>Player stats</h4>
-        <p className="subtle" style={{ marginTop: 0, fontSize: 13 }}>Enter the basics inline; tap “More stats” to record passing, ball carries, defending and goalkeeping.</p>
+        <p className="subtle" style={{ marginTop: 0, fontSize: 13 }}>Enter the basics inline; tap “More stats” to record passing, ball carries, defending, goalkeeping and discipline.</p>
         {players.length === 0 ? <p className="subtle">No players on this team yet.</p> : (
           <div className="stack" style={{ gap: 8 }}>
             {players.map((p) => (
@@ -118,14 +119,20 @@ export default function CoachLogMatch() {
                   </div>
                 </div>
                 {open[p.id] && (
-                  <div className="grid grid-3" style={{ marginTop: 10, gap: 8 }}>
-                    {EXTRA.map(([k, lbl]) => (
-                      <label key={k} className="field" style={{ margin: 0 }}>
-                        <span className="label" style={{ fontSize: 12 }}>{lbl}</span>
-                        {numInput(p.id, k, '100%')}
-                      </label>
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-3" style={{ marginTop: 10, gap: 8 }}>
+                      {EXTRA.map(([k, lbl]) => (
+                        <label key={k} className="field" style={{ margin: 0 }}>
+                          <span className="label" style={{ fontSize: 12 }}>{lbl}</span>
+                          {numInput(p.id, k, '100%')}
+                        </label>
+                      ))}
+                    </div>
+                    <label className="row" style={{ gap: 8, marginTop: 10 }}>
+                      <input type="checkbox" checked={!!stats[p.id]?.clean_sheet} onChange={(e) => setStat(p.id, 'clean_sheet', e.target.checked)} />
+                      <span>Clean sheet (goalkeeper / defender)</span>
+                    </label>
+                  </>
                 )}
               </div>
             ))}

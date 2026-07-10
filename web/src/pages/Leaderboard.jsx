@@ -13,33 +13,49 @@ import { useAuth } from '../context/AuthContext.jsx';
 const MEDALS = ['🥇', '🥈', '🥉'];
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
-// metric catalogue: key, label, group, and value formatter
 const pct = (v) => `${Math.round(v)}%`;
 const one = (v) => Number(v).toFixed(1);
 const two = (v) => Number(v).toFixed(2);
 const intf = (v) => String(Math.round(v));
 const METRICS = [
   { key: 'avg_rating', label: 'Match rating', group: 'Overall', fmt: two, unit: 'avg' },
+  { key: 'tot_minutes', label: 'Minutes played', group: 'Overall', fmt: intf, unit: 'total' },
+
   { key: 'tot_goals', label: 'Goals', group: 'Attacking', fmt: intf, unit: 'total' },
   { key: 'avg_goals', label: 'Goals per game', group: 'Attacking', fmt: two, unit: '/game' },
   { key: 'tot_assists', label: 'Assists', group: 'Attacking', fmt: intf, unit: 'total' },
+  { key: 'tot_goal_contributions', label: 'Goal contributions (G+A)', group: 'Attacking', fmt: intf, unit: 'total' },
+  { key: 'avg_goal_contributions', label: 'Goal contributions per game', group: 'Attacking', fmt: two, unit: '/game' },
   { key: 'avg_shots_on_target', label: 'Shots on target', group: 'Attacking', fmt: two, unit: '/game' },
   { key: 'avg_shots', label: 'Shots', group: 'Attacking', fmt: two, unit: '/game' },
+  { key: 'avg_crosses', label: 'Crosses', group: 'Attacking', fmt: two, unit: '/game' },
+
   { key: 'avg_key_passes', label: 'Key passes', group: 'Passing', fmt: two, unit: '/game' },
   { key: 'avg_passes_completed', label: 'Passes completed', group: 'Passing', fmt: one, unit: '/game' },
   { key: 'pass_accuracy', label: 'Passing accuracy', group: 'Passing', fmt: pct, unit: '' },
+
   { key: 'avg_ball_carries', label: 'Ball carries', group: 'Ball progression', fmt: two, unit: '/game' },
   { key: 'avg_dribbles', label: 'Dribbles', group: 'Ball progression', fmt: two, unit: '/game' },
+
   { key: 'avg_def_contributions', label: 'Defensive actions', group: 'Defending', fmt: two, unit: '/game' },
   { key: 'avg_tackles', label: 'Tackles', group: 'Defending', fmt: two, unit: '/game' },
   { key: 'avg_interceptions', label: 'Interceptions', group: 'Defending', fmt: two, unit: '/game' },
   { key: 'avg_clearances', label: 'Clearances', group: 'Defending', fmt: two, unit: '/game' },
   { key: 'avg_blocks', label: 'Blocks', group: 'Defending', fmt: two, unit: '/game' },
+  { key: 'avg_recoveries', label: 'Recoveries', group: 'Defending', fmt: two, unit: '/game' },
+
+  { key: 'avg_aerials_won', label: 'Aerial duels won', group: 'Duels & physical', fmt: two, unit: '/game' },
+
   { key: 'avg_saves', label: 'Saves', group: 'Goalkeeping', fmt: two, unit: '/game' },
+  { key: 'tot_clean_sheets', label: 'Clean sheets', group: 'Goalkeeping', fmt: intf, unit: 'total' },
+
+  { key: 'avg_fouls_won', label: 'Fouls won', group: 'Discipline', fmt: two, unit: '/game' },
+  { key: 'avg_fouls_committed', label: 'Fouls committed', group: 'Discipline', fmt: two, unit: '/game' },
+  { key: 'tot_yellow_cards', label: 'Yellow cards', group: 'Discipline', fmt: intf, unit: 'total' },
+  { key: 'tot_red_cards', label: 'Red cards', group: 'Discipline', fmt: intf, unit: 'total' },
 ];
-const GROUPS = ['Overall', 'Attacking', 'Passing', 'Ball progression', 'Defending', 'Goalkeeping'];
-// category leaders shown as cards up top
-const LEADERS = ['avg_rating', 'tot_goals', 'tot_assists', 'avg_ball_carries', 'pass_accuracy', 'avg_def_contributions'];
+const GROUPS = ['Overall', 'Attacking', 'Passing', 'Ball progression', 'Defending', 'Duels & physical', 'Goalkeeping', 'Discipline'];
+const LEADERS = ['avg_rating', 'tot_goal_contributions', 'pass_accuracy', 'avg_ball_carries', 'avg_def_contributions', 'tot_clean_sheets'];
 
 export default function Leaderboard() {
   const { role } = useAuth();
@@ -61,7 +77,6 @@ export default function Leaderboard() {
       <div className="container" style={{ maxWidth: 720, padding: 0 }}>
         <WeeklyHighlights />
 
-        {/* Category leaders */}
         {stats.length > 0 && (
           <>
             <div className="section-header"><h4 style={{ margin: 0 }}>Category leaders</h4></div>
@@ -88,7 +103,6 @@ export default function Leaderboard() {
           </>
         )}
 
-        {/* Stat leaderboard with metric picker */}
         <div className="card" style={{ marginBottom: 18 }}>
           <div className="section-header"><h4 style={{ margin: 0 }}>Stat leaderboard</h4></div>
           <div className="field"><label className="label">Category</label>
@@ -120,7 +134,6 @@ export default function Leaderboard() {
             )}
         </div>
 
-        {/* Season points leaderboard (rank engine) */}
         <div className="section-header"><h4 style={{ margin: 0 }}>Season leaderboard</h4></div>
         {season === null ? <div className="card">Loading…</div> :
          season.length === 0 ? (
