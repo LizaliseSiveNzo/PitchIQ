@@ -68,6 +68,7 @@ export default function Leaderboard() {
     supabase.rpc('stat_leaderboard').then(({ data }) => setStats(data || []));
   }, []);
 
+  const topN = role === 'player' ? 5 : 50;
   const metric = METRICS.find((m) => m.key === metricKey);
   const ranked = [...stats].filter((r) => Number(r[metricKey]) > 0).sort((a, b) => Number(b[metricKey]) - Number(a[metricKey]));
   const topFor = (key) => { const r = [...stats].filter((x) => Number(x[key]) > 0).sort((a, b) => Number(b[key]) - Number(a[key])); return r[0]; };
@@ -104,7 +105,7 @@ export default function Leaderboard() {
         )}
 
         <div className="card" style={{ marginBottom: 18 }}>
-          <div className="section-header"><h4 style={{ margin: 0 }}>Stat leaderboard</h4></div>
+          <div className="section-header"><h4 style={{ margin: 0 }}>Stat leaderboard</h4>{role === 'player' && <span className="badge badge-neutral">Top 5</span>}</div>
           <div className="field"><label className="label">Category</label>
             <select className="select" value={metricKey} onChange={(e) => setMetricKey(e.target.value)}>
               {GROUPS.map((g) => (
@@ -117,7 +118,7 @@ export default function Leaderboard() {
             ? <p className="subtle" style={{ margin: 0 }}>No match stats logged for this category yet.</p>
             : (
               <div className="stack" style={{ gap: 6 }}>
-                {ranked.slice(0, 15).map((r, i) => (
+                {ranked.slice(0, topN).map((r, i) => (
                   <div key={r.player_id} className="row between" style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 10 }}>
                     <div className="row" style={{ gap: 10, minWidth: 0 }}>
                       <span style={{ width: 28, textAlign: 'center', fontWeight: 800 }}>{MEDALS[i] || `#${i + 1}`}</span>
@@ -134,7 +135,7 @@ export default function Leaderboard() {
             )}
         </div>
 
-        <div className="section-header"><h4 style={{ margin: 0 }}>Season leaderboard</h4></div>
+        <div className="section-header"><h4 style={{ margin: 0 }}>Season leaderboard</h4>{role === 'player' && <span className="badge badge-neutral">Top 5</span>}</div>
         {season === null ? <div className="card">Loading…</div> :
          season.length === 0 ? (
           <div className="card"><p className="subtle" style={{ margin: 0 }}>No leaderboard yet — rankings appear once training and matches are logged.</p></div>
