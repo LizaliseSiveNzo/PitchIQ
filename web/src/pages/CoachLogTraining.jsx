@@ -12,7 +12,7 @@ import { useQrScanner } from '../lib/useQrScanner.js';
 import { primeAudio, successBeep, errorBeep } from '../lib/sound.js';
 
 const isToday = (iso) => iso && new Date(iso).toDateString() === new Date().toDateString();
-const whenLabel = (s) => s.starts_at ? new Date(s.starts_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : (s.date || 'Session');
+const whenLabel = (s) => s.starts_at ? new Date(s.starts_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : (s.date ? new Date(s.date).toLocaleDateString() : 'Session');
 const REASONS = ['Injury', 'Illness', 'Emergency', 'Family / personal', 'Fatigue', 'Other'];
 const first = (n = '') => n.split(' ')[0];
 
@@ -23,13 +23,20 @@ export default function CoachLogTraining() {
   const [sessions, setSessions] = useState([]);
   const [sessionSel, setSessionSel] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newTime, setNewTime] = useState('');
+  const [newLocation, setNewLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [players, setPlayers] = useState([]);
   const [present, setPresent] = useState({});
   const [locked, setLocked] = useState(new Set());
-  const [leftEarly, setLeftEarly] = useState({});     // player_id -> reason
+  const [leftEarly, setLeftEarly] = useState({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
+  const [showEarlier, setShowEarlier] = useState(false);
+
+  // attendance list controls
+  const [pQuery, setPQuery] = useState('');
+  const [pSort, setPSort] = useState('name');   // 'name' | 'present'
 
   // per-player panel
   const [editFor, setEditFor] = useState('');
@@ -52,15 +59,20 @@ export default function CoachLogTraining() {
 
   useEffect(() => { if (!teamId) return; (async () => {
     const p = await teamPlayers(teamId); setPlayers(p);
-    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
-      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
-    setSessions(data || []);
+    await reloadSessions();
     setSessionSel('');
   })(); }, [teamId]);
 
+  async function reloadSessions() {
+    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
+      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(60);
+    setSessions(data || []);
+    return data || [];
+  }
+
   async function selectSession(sid, plist) {
     const ps = plist || players;
-    setSessionSel(sid); setOk(''); setErr(''); setEditFor('');
+    setSessionSel(sid); setOk(''); setErr(''); setEditFor(''); setPQuery('');
     if (sid === 'new') { setLocked(new Set()); setLeftEarly({}); setPresent(Object.fromEntries(ps.map((x) => [x.id, true]))); return; }
     const { data } = await supabase.rpc('session_attendance', { p_session_id: sid });
     const lockedSet = new Set((data || []).filter((x) => x.checkin_at).map((x) => x.player_id));
@@ -87,12 +99,12 @@ export default function CoachLogTraining() {
 
   async function ensureSession() {
     if (sessionSel !== 'new') return sessionSel;
+    const starts_at = (date && newTime) ? new Date(`${date}T${newTime}`).toISOString() : null;
     const { data: ts, error } = await supabase.from('training_sessions')
-      .insert({ team_id: teamId, coach_id: profile.id, date, notes }).select().single();
+      .insert({ team_id: teamId, coach_id: profile.id, date, starts_at, location: newLocation.trim() || null, notes: notes.trim() || null })
+      .select().single();
     if (error) throw error;
-    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
-      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
-    setSessions(data || []); setSessionSel(ts.id);
+    await reloadSessions(); setSessionSel(ts.id);
     return ts.id;
   }
 
@@ -128,9 +140,7 @@ export default function CoachLogTraining() {
     setErr(''); setOk('');
     const { error } = await supabase.rpc('delete_training_session', { p_session_id: sid });
     if (error) { setErr(error.message); return; }
-    const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
-      .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
-    setSessions(data || []);
+    await reloadSessions();
     if (sessionSel === sid) selectSession('new');
     setOk('Training session deleted.');
   }
@@ -138,13 +148,8 @@ export default function CoachLogTraining() {
   async function save(e) {
     e.preventDefault(); setErr(''); setOk(''); setBusy(true);
     try {
-      let sid = sessionSel;
-      if (sessionSel === 'new') {
-        const { data: ts, error } = await supabase.from('training_sessions')
-          .insert({ team_id: teamId, coach_id: profile.id, date, notes }).select().single();
-        if (error) { setErr(error.message); return; }
-        sid = ts.id;
-      }
+      let sid;
+      try { sid = await ensureSession(); } catch (e2) { setErr(e2.message || String(e2)); return; }
       const rows = players.map((p) => ({ session_id: sid, player_id: p.id, attended: !!present[p.id] }));
       if (rows.length) {
         const { error: e2 } = await supabase.from('attendance').upsert(rows, { onConflict: 'session_id,player_id' });
@@ -153,9 +158,7 @@ export default function CoachLogTraining() {
       await supabase.rpc('recompute_team_ranks', { p_team: teamId });
       stop(); setScanOpen(false);
       setOk(`Saved — ${rows.filter((r) => r.attended).length}/${rows.length} present. Ranks updated.`);
-      const { data } = await supabase.from('training_sessions').select('id,starts_at,date,location,notes')
-        .eq('team_id', teamId).order('starts_at', { ascending: false, nullsFirst: false }).limit(25);
-      setSessions(data || []); setSessionSel(sid); setNotes('');
+      await reloadSessions(); setSessionSel(sid); setNotes('');
     } finally { setBusy(false); }
   }
 
@@ -163,6 +166,47 @@ export default function CoachLogTraining() {
   if (teams.length === 0) return <AppShell role="coach" active="Training" title="Log Training"><div className="card">No teams assigned yet.</div></AppShell>;
 
   const presentCount = players.filter((p) => present[p.id]).length;
+  const absentCount = players.length - presentCount;
+
+  // grouped session list
+  const now = new Date();
+  const startWeek = new Date(now); startWeek.setHours(0, 0, 0, 0); startWeek.setDate(startWeek.getDate() - startWeek.getDay());
+  const endWeek = new Date(startWeek); endWeek.setDate(startWeek.getDate() + 7);
+  const sWhen = (s) => new Date(s.starts_at || s.date);
+  const groups = { today: [], week: [], earlier: [] };
+  sessions.forEach((s) => {
+    if (isToday(s.starts_at || s.date)) groups.today.push(s);
+    else { const w = sWhen(s); (w >= startWeek && w < endWeek) ? groups.week.push(s) : groups.earlier.push(s); }
+  });
+  const earlierShown = showEarlier ? groups.earlier : groups.earlier.slice(0, 6);
+
+  // attendance list filter + sort
+  const displayPlayers = [...players]
+    .filter((p) => p.name.toLowerCase().includes(pQuery.toLowerCase()))
+    .sort((a, b) => pSort === 'present'
+      ? ((present[b.id] ? 1 : 0) - (present[a.id] ? 1 : 0)) || a.name.localeCompare(b.name)
+      : a.name.localeCompare(b.name));
+
+  const sessionCard = (s) => {
+    const sel = sessionSel === s.id; const today = isToday(s.starts_at || s.date);
+    return (
+      <div key={s.id} onClick={() => selectSession(s.id)} role="button" tabIndex={0}
+        style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: sel ? '2px solid var(--green-600)' : '1px solid var(--border)', background: today ? 'var(--surface-2)' : 'var(--surface)' }}>
+        <div className="row between">
+          <div>
+            <strong>{s.notes || 'Training'}</strong>
+            <div className="subtle" style={{ fontSize: 12 }}>{whenLabel(s)}{s.location ? ` · ${s.location}` : ''}</div>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            {today && <span className="badge badge-warning">Today</span>}
+            <button type="button" className="btn btn-ghost" style={{ minHeight: 28, padding: '2px 8px', color: 'var(--danger)' }}
+              onClick={(e) => removeSession(s.id, e)} title="Delete session">🗑</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const groupHeader = (t) => <div className="subtle" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', margin: '4px 0' }}>{t}</div>;
 
   return (
     <AppShell role="coach" active="Training" title="Log Training">
@@ -179,37 +223,28 @@ export default function CoachLogTraining() {
               style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: sessionSel === 'new' ? '2px solid var(--green-600)' : '1px solid var(--border)' }}>
               <strong>➕ New session (not scheduled)</strong>
             </div>
-            {sessions.map((s) => {
-              const sel = sessionSel === s.id; const today = isToday(s.starts_at);
-              return (
-                <div key={s.id} onClick={() => selectSession(s.id)} role="button" tabIndex={0}
-                  style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', border: sel ? '2px solid var(--green-600)' : '1px solid var(--border)', background: today ? 'var(--surface-2)' : 'var(--surface)' }}>
-                  <div className="row between">
-                    <div>
-                      <strong>{s.notes || 'Training'}</strong>
-                      <div className="subtle" style={{ fontSize: 12 }}>{whenLabel(s)}{s.location ? ` · ${s.location}` : ''}</div>
-                    </div>
-                    <div className="row" style={{ gap: 6 }}>
-                      {today && <span className="badge badge-warning">Today</span>}
-                      <button type="button" className="btn btn-ghost" style={{ minHeight: 28, padding: '2px 8px', color: 'var(--danger)' }}
-                        onClick={(e) => removeSession(s.id, e)} title="Delete session">🗑</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {groups.today.length > 0 && <>{groupHeader('Today')}{groups.today.map(sessionCard)}</>}
+            {groups.week.length > 0 && <>{groupHeader('This week')}{groups.week.map(sessionCard)}</>}
+            {groups.earlier.length > 0 && <>{groupHeader('Earlier')}{earlierShown.map(sessionCard)}
+              {groups.earlier.length > 6 && <button type="button" className="btn btn-ghost" style={{ minHeight: 30 }} onClick={() => setShowEarlier((v) => !v)}>{showEarlier ? 'Show less' : `Show ${groups.earlier.length - 6} more`}</button>}</>}
           </div>
 
           {sessionSel === 'new' && (
-            <div className="field" style={{ marginTop: 12 }}><label className="label">Date (for the new session)</label>
-              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div className="grid grid-3" style={{ marginTop: 12, gap: 10 }}>
+              <div className="field" style={{ margin: 0 }}><label className="label">Date</label>
+                <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+              <div className="field" style={{ margin: 0 }}><label className="label">Time (optional)</label>
+                <input className="input" type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} /></div>
+              <div className="field" style={{ margin: 0 }}><label className="label">Location (optional)</label>
+                <input className="input" placeholder="e.g. Main Pitch" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} /></div>
+            </div>
           )}
         </div>
 
         {sessionSel ? (
         <form className="card" onSubmit={save}>
           <div className="section-header">
-            <h4 style={{ margin: 0 }}>Attendance <span className="subtle" style={{ fontSize: 13, fontWeight: 400 }}>· {presentCount}/{players.length} present</span></h4>
+            <h4 style={{ margin: 0 }}>Attendance <span className="subtle" style={{ fontSize: 13, fontWeight: 400 }}>· {presentCount} present · {absentCount} absent</span></h4>
             <button type="button" className="btn btn-primary" style={{ minHeight: 34, padding: '6px 12px' }} onClick={toggleScanner}>
               {scanOpen ? 'Close scanner' : '📷 Scan present'}
             </button>
@@ -237,8 +272,18 @@ export default function CoachLogTraining() {
             </div>
           )}
 
+          {players.length > 6 && (
+            <div className="row" style={{ gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+              <input className="input" style={{ flex: 1, minWidth: 150, minHeight: 34 }} placeholder="Find a player…" value={pQuery} onChange={(e) => setPQuery(e.target.value)} />
+              <div className="segmented">
+                <button type="button" aria-selected={pSort === 'name'} onClick={() => setPSort('name')}>A–Z</button>
+                <button type="button" aria-selected={pSort === 'present'} onClick={() => setPSort('present')}>Present first</button>
+              </div>
+            </div>
+          )}
+
           <div className="stack" style={{ gap: 8 }}>
-            {players.map((p) => {
+            {displayPlayers.map((p) => {
               const le = leftEarly[p.id];
               return (
                 <div key={p.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px' }}>
@@ -286,11 +331,12 @@ export default function CoachLogTraining() {
               );
             })}
             {players.length === 0 && <p className="subtle">No players on this team yet.</p>}
+            {players.length > 0 && displayPlayers.length === 0 && <p className="subtle">No players match “{pQuery}”.</p>}
           </div>
 
           {sessionSel === 'new' && (
-            <div className="field" style={{ marginTop: 12 }}><label className="label">Session note (optional)</label>
-              <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            <div className="field" style={{ marginTop: 12 }}><label className="label">Session note / focus (optional)</label>
+              <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Fitness + set pieces" /></div>
           )}
 
           {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</p>}
