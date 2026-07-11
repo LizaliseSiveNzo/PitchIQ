@@ -64,6 +64,7 @@ export default function Leaderboard() {
   const [season, setSeason] = useState([]);
   const [stats, setStats] = useState([]);
   const [metricKey, setMetricKey] = useState('avg_rating');
+  const [view, setView] = useState('main');
 
   useEffect(() => {
     if (session?.demo) return;
@@ -78,6 +79,18 @@ export default function Leaderboard() {
   const topFor = (key) => { const r = [...stats].filter((x) => Number(x[key]) > 0).sort((a, b) => Number(b[key]) - Number(a[key])); return r[0]; };
   const tileItems = TILES.map((t) => { const m = METRICS.find((x) => x.key === t.key); return { ...t, fmt: m.fmt, unit: m.unit }; });
   const statsById = Object.fromEntries(stats.map((x) => [x.player_id, x]));
+  const n2 = (v) => Number(v || 0);
+  const fameStats = stats.map((x) => ({ ...x, _mvp: x.games >= 3 ? n2(x.avg_rating) : 0, _rising: (x.games >= 1 && x.games <= 6) ? n2(x.avg_rating) : 0 }));
+  const fameItems = [
+    { key: '_mvp', label: 'All-time MVP', icon: '👑', fmt: two, unit: 'avg' },
+    { key: '_rising', label: 'Best upcoming', icon: '⚡', fmt: two, unit: 'avg' },
+    { key: 'tot_goals', label: 'All-time top scorer', icon: '⚽', fmt: intf, unit: '' },
+    { key: 'tot_goal_contributions', label: 'Most goal contributions', icon: '🎯', fmt: intf, unit: '' },
+    { key: 'avg_def_contributions', label: 'Best defender', icon: '🛡️', fmt: two, unit: '/g' },
+    { key: 'tot_clean_sheets', label: 'Best keeper', icon: '🧤', fmt: intf, unit: '' },
+    { key: 'pass_accuracy', label: 'Most accurate passer', icon: '🧭', fmt: pct, unit: '' },
+    { key: 'tot_minutes', label: 'Iron man (minutes)', icon: '⏱️', fmt: intf, unit: '' },
+  ];
 
   const potw = hl?.player_of_week;
   const motm = hl?.motm || [];
@@ -94,8 +107,9 @@ export default function Leaderboard() {
       <style>{`.app .content{background:#000 !important;}`}</style>
       <div style={{ color: C.text }}>
 
+        {view === 'main' ? (<>
         {/* Player of the Week hero */}
-        <div style={{ ...card, background: `radial-gradient(120% 140% at 85% 0%, rgba(228,3,46,.55), rgba(228,3,46,.10) 45%, ${C.card} 75%)`, border: `1px solid ${C.border}`, padding: 22, position: 'relative', overflow: 'hidden' }}>
+        <div onClick={() => setView('fame')} style={{ ...card, background: `radial-gradient(120% 140% at 85% 0%, rgba(228,3,46,.55), rgba(228,3,46,.10) 45%, ${C.card} 75%)`, border: `1px solid ${C.border}`, padding: 22, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
           <RedDust />
           <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ color: C.red, fontWeight: 800, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase' }}>♛ Player of the Week</div>
@@ -120,6 +134,7 @@ export default function Leaderboard() {
               </div>
             </>
           ) : <p style={{ color: C.muted, margin: '10px 0 0' }}>No standout yet this week — log a match and someone gets crowned!</p>}
+          <div style={{ marginTop: 14, color: C.red, fontWeight: 800, fontSize: 12, letterSpacing: '.04em' }}>🏛️ Tap for the Hall of Fame ›</div>
           </div>
         </div>
 
@@ -165,7 +180,16 @@ export default function Leaderboard() {
             <SeasonBoard season={season} statsById={statsById} C={C} />
           )}
         </div>
-
+        </>) : (
+          <>
+            <button type="button" onClick={() => setView('main')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '8px 14px', cursor: 'pointer', marginBottom: 12 }}>← Back to leaderboard</button>
+            <div style={card}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}><span style={{ color: C.red, fontSize: 18 }}>🏛️</span><strong style={{ fontSize: 17 }}>Hall of Fame</strong></div>
+              <p style={{ color: C.muted, fontSize: 12, margin: '0 0 12px' }}>All-time &amp; standout performers across the academy. Tap a category for its top 5.</p>
+              <CategoryLeaders items={fameItems} stats={fameStats} C={C} />
+            </div>
+          </>
+        )}
       </div>
     </AppShell>
   );
