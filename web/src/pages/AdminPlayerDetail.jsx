@@ -47,15 +47,15 @@ export default function AdminPlayerDetail() {
     if (data?.signedUrl) window.open(data.signedUrl, '_blank');
   }
 
-  if (d === null) return <AppShell role="admin" active="Stats" title="Player"><div className="card">Loading…</div></AppShell>;
-  if (d === false) return <AppShell role="admin" active="Stats" title="Player"><div className="card">Player not found. <Link to="/admin/stats">Back</Link>{err ? ` — ${err}` : ''}</div></AppShell>;
+  if (d === null) return <AppShell role="admin" active="Players" title="Player"><div className="card">Loading…</div></AppShell>;
+  if (d === false) return <AppShell role="admin" active="Players" title="Player"><div className="card">Player not found. <Link to="/admin/players">Back</Link>{err ? ` — ${err}` : ''}</div></AppShell>;
 
   const meal = notes.filter((x) => x.kind === 'diet');
   const coachNotes = notes.filter((x) => x.kind === 'note');
 
   return (
-    <AppShell role="admin" active="Stats" title={d.name || 'Player'}>
-      <div style={{ marginBottom: 12 }}><Link to="/admin/stats" className="subtle">← Back to stats</Link></div>
+    <AppShell role="admin" active="Players" title={d.name || 'Player'}>
+      <div style={{ marginBottom: 12 }}><Link to="/admin/players" className="subtle">← Back to stats</Link></div>
 
       {/* Identity + metadata */}
       <div className="card" style={{ marginBottom: 16 }}>

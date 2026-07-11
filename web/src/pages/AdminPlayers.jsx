@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -136,7 +137,7 @@ export default function AdminPlayers() {
             : <table className="table"><thead><tr><th>Name</th><th>Email</th><th>Team</th><th>Rank</th></tr></thead>
                 <tbody>{assigned.map((p) => (
                   <tr key={p.user_id}>
-                    <td>{p.name || '—'}</td>
+                    <td><Link to={`/admin/player/${p.player_id}`} style={{ color: 'inherit' }}><span style={{ textDecoration: 'underline', fontWeight: 600 }}>{p.name || '—'}</span></Link></td>
                     <td className="subtle">{p.email}</td>
                     <td>{p.team_name || '—'}</td>
                     <td><span className="badge badge-neutral">{(p.rank_level || 'Rookie').replace('_',' ')}</span></td>
