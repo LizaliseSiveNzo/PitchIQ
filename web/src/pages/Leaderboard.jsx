@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import RedDust from '../components/RedDust.jsx';
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 const pct = (v) => `${Math.round(v)}%`;
@@ -89,7 +90,9 @@ export default function Leaderboard() {
       <div style={{ color: C.text }}>
 
         {/* Player of the Week hero */}
-        <div style={{ ...card, background: `radial-gradient(120% 140% at 85% 0%, rgba(228,3,46,.55), rgba(228,3,46,.10) 45%, ${C.card} 75%)`, border: `1px solid ${C.border}`, padding: 22 }}>
+        <div style={{ ...card, background: `radial-gradient(120% 140% at 85% 0%, rgba(228,3,46,.55), rgba(228,3,46,.10) 45%, ${C.card} 75%)`, border: `1px solid ${C.border}`, padding: 22, position: 'relative', overflow: 'hidden' }}>
+          <RedDust />
+          <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ color: C.red, fontWeight: 800, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase' }}>♛ Player of the Week</div>
           {potw ? (
             <>
@@ -112,6 +115,7 @@ export default function Leaderboard() {
               </div>
             </>
           ) : <p style={{ color: C.muted, margin: '10px 0 0' }}>No standout yet this week — log a match and someone gets crowned!</p>}
+          </div>
         </div>
 
         {/* Man of the Match */}
