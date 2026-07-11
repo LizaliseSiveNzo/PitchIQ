@@ -30,6 +30,10 @@ export default function CoachPlayerDetail() {
   const [benchReason, setBenchReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [doc, setDoc] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState('');
+  const [uploadsKey, setUploadsKey] = useState(0);
 
   useEffect(() => { if (!session?.demo) load(); }, [id]);
 
@@ -80,6 +84,23 @@ export default function CoachPlayerDetail() {
       await supabase.from('coach_player_notes').insert({ coach_id: profile.id, player_id: id, diet_plan: newMeal.trim() || null });
       setMsg('Meal plan updated.'); load();
     } finally { setBusy(false); }
+  }
+
+  async function sendDoc(e) {
+    e.preventDefault();
+    if (!doc) return;
+    setSending(true); setSendMsg('');
+    try {
+      if (doc.size > 200 * 1024 * 1024) { setSendMsg('File too large (max 200MB).'); return; }
+      const safe = doc.name.replace(/[^\w.\-]/g, '_');
+      const path = `${id}/${Date.now()}_${safe}`;
+      const { error: upErr } = await supabase.storage.from('player-files').upload(path, doc, { contentType: doc.type || undefined });
+      if (upErr) { setSendMsg(upErr.message); return; }
+      const kind = (doc.type || '').startsWith('image/') ? 'image' : 'document';
+      const { error } = await supabase.rpc('coach_add_player_file', { p_player_id: id, p_path: path, p_file_name: doc.name, p_mime: doc.type || null, p_kind: kind });
+      if (error) { setSendMsg(error.message); return; }
+      setDoc(null); setSendMsg('Document sent — it’s on the player’s profile.'); setUploadsKey((k) => k + 1);
+    } finally { setSending(false); }
   }
 
   async function toggleBench() {
@@ -172,7 +193,16 @@ export default function CoachPlayerDetail() {
 
       <AttributeEditor playerId={id} />
 
-      <PlayerUploads playerId={id} canUpload={false} />
+      <form className="card" style={{ marginTop: 18 }} onSubmit={sendDoc}>
+        <h4 style={{ marginTop: 0 }}>📎 Send a document to {name.split(' ')[0]}</h4>
+        <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>Uploads straight to the player’s profile and notifies them.</p>
+        <input key={uploadsKey} className="input" type="file" accept="image/*,application/pdf,video/*" onChange={(e) => setDoc(e.target.files?.[0] || null)} />
+        {doc && <p className="subtle" style={{ fontSize: 12, margin: '4px 0 0' }}>{doc.name} · {(doc.size / 1024 / 1024).toFixed(1)}MB</p>}
+        {sendMsg && <p style={{ color: 'var(--green-700)', fontSize: 13, margin: '8px 0 0' }}>{sendMsg}</p>}
+        <button className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={sending || !doc}>{sending ? 'Sending…' : 'Send document'}</button>
+      </form>
+
+      <PlayerUploads key={uploadsKey} playerId={id} canUpload={false} />
 
       <InjuryThread playerId={id} />
     </AppShell>
