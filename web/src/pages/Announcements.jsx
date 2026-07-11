@@ -42,7 +42,7 @@ export default function Announcements() {
           <div className="stack" style={{ gap: 12 }}>
             {items.map((a) => (
               <div key={a.id} className="card">
-                <strong>📣 {a.title || (a.file_name ? a.file_name : 'Announcement')}</strong>
+                <strong>{a.pinned ? '📌 ' : '📣 '}{a.title || (a.file_name ? a.file_name : 'Announcement')}</strong>
                 {a.body && <p style={{ margin: '6px 0 0' }}>{a.body}</p>}
                 {a.file_path && urls[a.id] && (
                   <div style={{ marginTop: 10 }}>
