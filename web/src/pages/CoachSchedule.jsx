@@ -74,11 +74,11 @@ export default function CoachSchedule() {
   async function addFixture(e) {
     e.preventDefault(); setErr(''); setMsg(''); setBusy(true);
     try {
-      const { error } = await supabase.from('matches').insert({ team_id: teamId, opponent, date: fDate, venue });
+      const { data: m, error } = await supabase.from('matches').insert({ team_id: teamId, opponent, date: fDate, venue }).select('id').single();
       if (error) { setErr(error.message); return; }
       if (notify) {
         const team = teams.find((t) => t.id === teamId);
-        await supabase.rpc('notify_team', { p_team: teamId, p_message: `New fixture: ${team?.name} vs ${opponent} — ${new Date(fDate).toLocaleString()} (${venue})` });
+        await supabase.rpc('notify_team', { p_team: teamId, p_message: `New fixture: ${team?.name} vs ${opponent} — ${new Date(fDate).toLocaleString()} (${venue})`, p_ref_type: 'match', p_ref_id: m.id });
       }
       setMsg('Fixture scheduled.'); setOpponent(''); setFDate(''); loadUpcoming();
     } finally { setBusy(false); }

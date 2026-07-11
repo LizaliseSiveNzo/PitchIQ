@@ -50,7 +50,7 @@ export default function CoachLogMatch() {
       if (error) { setErr(error.message); return; }
       if (notify) {
         const team = teams.find((t) => t.id === teamId);
-        await supabase.rpc('notify_team', { p_team: teamId, p_message: `New fixture: ${team?.name} vs ${opponent} — ${whenLabel(dt)} (${homeAway})` });
+        await supabase.rpc('notify_team', { p_team: teamId, p_message: `New fixture: ${team?.name} vs ${opponent} — ${whenLabel(dt)} (${homeAway})`, p_ref_type: 'match', p_ref_id: m.id });
       }
       setMsg('Match added. Tap it below to set the lineup.');
       setOpponent(''); setDt(''); setCompetition('');
