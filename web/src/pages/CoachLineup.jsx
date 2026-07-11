@@ -168,13 +168,13 @@ export default function CoachLineup() {
     } finally { setBusy(false); }
   }
 
-  if (session?.demo) return <AppShell role="coach" active="Lineup" title="Lineup"><div className="card">Demo mode — sign in as a real coach to build lineups.</div></AppShell>;
-  if (teams.length === 0) return <AppShell role="coach" active="Lineup" title="Lineup"><div className="card">No teams yet. Create a team on your dashboard first.</div></AppShell>;
+  if (session?.demo) return <AppShell role="coach" active="Matches" title="Lineup"><div className="card">Demo mode — sign in as a real coach to build lineups.</div></AppShell>;
+  if (teams.length === 0) return <AppShell role="coach" active="Matches" title="Lineup"><div className="card">No teams yet. Create a team on your dashboard first.</div></AppShell>;
 
   // ---------- READ-ONLY RUN-DOWN ----------
   if (matchId && mode === 'view') {
     return (
-      <AppShell role="coach" active="Lineup" title="Match Lineup">
+      <AppShell role="coach" active="Matches" title="Match Lineup">
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="section-header">
             <h4 style={{ margin: 0 }}>vs {opponent}</h4>
@@ -249,7 +249,7 @@ export default function CoachLineup() {
   };
 
   return (
-    <AppShell role="coach" active="Lineup" title="Match Lineup">
+    <AppShell role="coach" active="Matches" title="Match Lineup">
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="section-header"><h4 style={{ margin: 0 }}>Fixture</h4>
           {matchId && <button className="btn btn-ghost" style={{ minHeight: 32 }} onClick={() => loadLineup(matchId)}>Cancel</button>}
