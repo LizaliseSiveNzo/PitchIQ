@@ -80,13 +80,13 @@ export default function CoachCheckin() {
   }
   async function undoEarly(playerId) { await supabase.rpc('clear_left_early', { p_session_id: sessionId, p_player_id: playerId }); loadRoster(); }
 
-  if (session?.demo) return <AppShell role="coach" active="Check-in" title="Check-in"><div className="card">Demo mode — sign in as a real coach to take attendance.</div></AppShell>;
-  if (teams.length === 0) return <AppShell role="coach" active="Check-in" title="Check-in"><div className="card">No teams yet. Create a team on your dashboard first.</div></AppShell>;
+  if (session?.demo) return <AppShell role="coach" active="Training" title="Check-in"><div className="card">Demo mode — sign in as a real coach to take attendance.</div></AppShell>;
+  if (teams.length === 0) return <AppShell role="coach" active="Training" title="Check-in"><div className="card">No teams yet. Create a team on your dashboard first.</div></AppShell>;
 
   const present = roster.filter((r) => r.present).length;
 
   return (
-    <AppShell role="coach" active="Check-in" title="Practice Check-in">
+    <AppShell role="coach" active="Training" title="Practice Check-in">
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="grid grid-2">
           <div className="field" style={{ margin: 0 }}><label className="label">Team</label>
