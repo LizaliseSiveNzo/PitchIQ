@@ -194,12 +194,12 @@ export default function CoachPlayerDetail() {
       <AttributeEditor playerId={id} />
 
       <form className="card" style={{ marginTop: 18 }} onSubmit={sendDoc}>
-        <h4 style={{ marginTop: 0 }}>📎 Send a document to {name.split(' ')[0]}</h4>
-        <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>Uploads straight to the player’s profile and notifies them.</p>
+        <h4 style={{ marginTop: 0 }}>📎 Send a document, photo or video to {name.split(' ')[0]}</h4>
+        <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>Documents, images and videos (up to 200MB) — uploads straight to the player’s profile and notifies them.</p>
         <input key={uploadsKey} className="input" type="file" accept="image/*,application/pdf,video/*" onChange={(e) => setDoc(e.target.files?.[0] || null)} />
         {doc && <p className="subtle" style={{ fontSize: 12, margin: '4px 0 0' }}>{doc.name} · {(doc.size / 1024 / 1024).toFixed(1)}MB</p>}
         {sendMsg && <p style={{ color: 'var(--green-700)', fontSize: 13, margin: '8px 0 0' }}>{sendMsg}</p>}
-        <button className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={sending || !doc}>{sending ? 'Sending…' : 'Send document'}</button>
+        <button className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={sending || !doc}>{sending ? 'Sending…' : 'Send to player'}</button>
       </form>
 
       <PlayerUploads key={uploadsKey} playerId={id} canUpload={false} />
