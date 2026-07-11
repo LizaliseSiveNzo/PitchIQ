@@ -144,7 +144,7 @@ function LiveDashboard() {
                 <table className="table"><thead><tr><th>Name</th><th>Email</th><th>Position</th><th>Rank</th></tr></thead>
                   <tbody>{byTeam[tn].map((p) => (
                     <tr key={p.user_id}>
-                      <td><span className="row"><span className="avatar">{(p.name || '?').split(' ').map((w)=>w[0]).join('').slice(0,2)}</span> {p.name || '—'}</span></td>
+                      <td><Link to={`/admin/player/${p.player_id}`} className="row" style={{ color: 'inherit', textDecoration: 'none' }}><span className="avatar">{(p.name || '?').split(' ').map((w)=>w[0]).join('').slice(0,2)}</span> <span style={{ textDecoration: 'underline' }}>{p.name || '—'}</span></Link></td>
                       <td className="subtle">{p.email}</td>
                       <td>{p.play_position || '—'}</td>
                       <td><span className="badge badge-neutral">{(p.rank_level || 'Rookie').replace('_',' ')}</span></td>

@@ -4,12 +4,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { myTeams, teamPlayers } from '../lib/coach.js';
 import CoachCalendar from '../components/CoachCalendar.jsx';
+import StatCard from '../components/StatCard.jsx';
 
 const DIVISIONS = ['U11','U12','U13','U14','U15','U16','U19','First_Team'];
 
@@ -73,10 +74,13 @@ function CreateTeam({ onCreated, onCancel }) {
 
 function LiveCoach() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState(null);
   const [teamId, setTeamId] = useState('');
   const [squad, setSquad] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [nextUp, setNextUp] = useState(null);
+  const [matchCount, setMatchCount] = useState(0);
 
   async function reloadTeams(selectId) {
     const t = await myTeams(profile.id);
@@ -96,8 +100,20 @@ function LiveCoach() {
     if (sIds.length) { const { data } = await supabase.from('attendance').select('player_id,attended').in('session_id', sIds); att = data || []; }
     const { data: matches } = await supabase.from('matches').select('id').eq('team_id', tid);
     const mIds = (matches || []).map((m) => m.id);
+    setMatchCount(mIds.length);
     let stats = [];
     if (mIds.length) { const { data } = await supabase.from('player_match_stats').select('player_id,minutes_played,rating').in('match_id', mIds); stats = data || []; }
+    // next up: soonest upcoming match or practice (from start of today)
+    const fromIso = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); })();
+    const [{ data: um }, { data: up }] = await Promise.all([
+      supabase.from('matches').select('id,opponent,date,venue').eq('team_id', tid).gte('date', fromIso).order('date', { ascending: true }).limit(1),
+      supabase.from('training_sessions').select('id,notes,starts_at,location').eq('team_id', tid).not('starts_at', 'is', null).gte('starts_at', fromIso).order('starts_at', { ascending: true }).limit(1),
+    ]);
+    const cand = [];
+    if (um && um[0]) cand.push({ kind: 'match', id: um[0].id, when: new Date(um[0].date), title: 'vs ' + um[0].opponent, where: um[0].venue });
+    if (up && up[0]) cand.push({ kind: 'practice', id: up[0].id, when: new Date(up[0].starts_at), title: up[0].notes || 'Training', where: up[0].location });
+    cand.sort((a, b) => a.when - b.when);
+    setNextUp(cand[0] || null);
     setSquad(players.map((p) => {
       const a = att.filter((x) => x.player_id === p.id);
       const rate = total ? Math.round(a.filter((x) => x.attended).length / total * 100) : 0;
@@ -137,9 +153,49 @@ function LiveCoach() {
         <div className="row" style={{ gap: 10, alignSelf: 'end', flexWrap: 'wrap' }}>
           <button className="btn btn-ghost" onClick={() => setShowCreate((v) => !v)}>＋ New team</button>
           <Link to="/coach/training" className="btn btn-primary">➕ Log training</Link>
-          <Link to="/coach/match" className="btn btn-secondary">⚽ Log match</Link>
+          <Link to="/coach/match" className="btn btn-secondary">⚽ Matches</Link>
         </div>
       </div>
+
+      {(() => {
+        const present = squad.filter((p) => p.sessions && p.rate >= 50).length;
+        const avgAtt = squad.length && squad.some((p) => p.sessions) ? Math.round(squad.reduce((n, p) => n + (p.sessions ? p.rate : 0), 0) / squad.filter((p) => p.sessions).length || 0) : 0;
+        const goTo = () => nextUp && (nextUp.kind === 'practice' ? navigate(`/coach/checkin?session=${nextUp.id}`) : navigate(`/coach/lineup?match=${nextUp.id}`));
+        const isToday = nextUp && new Date(nextUp.when).toDateString() === new Date().toDateString();
+        return (
+          <>
+            {nextUp ? (
+              <div className="card" onClick={goTo} role="button" tabIndex={0}
+                style={{ marginBottom: 16, cursor: 'pointer', borderLeft: `4px solid ${nextUp.kind === 'match' ? 'var(--energy)' : 'var(--green-600)'}` }}>
+                <div className="row between" style={{ flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <div className="subtle" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                      {isToday ? 'Today' : 'Next up'} · {nextUp.kind === 'match' ? 'Match' : 'Training'}
+                    </div>
+                    <h3 style={{ margin: '4px 0 2px' }}>{nextUp.title}</h3>
+                    <div className="subtle" style={{ fontSize: 13 }}>{new Date(nextUp.when).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}{nextUp.where ? ` · ${nextUp.where}` : ''}</div>
+                  </div>
+                  <span className="btn btn-primary" style={{ minHeight: 38 }}>{nextUp.kind === 'match' ? '📋 Set lineup' : '✅ Take attendance'}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="row between" style={{ flexWrap: 'wrap', gap: 10 }}>
+                  <div><div className="subtle" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>Next up</div>
+                    <p style={{ margin: '6px 0 0' }}>Nothing scheduled. Add a session or fixture.</p></div>
+                  <Link to="/coach/schedule" className="btn btn-secondary" style={{ minHeight: 38 }}>📅 Schedule</Link>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-4" style={{ marginBottom: 16 }}>
+              <StatCard label="Squad size" value={squad.length} />
+              <StatCard label="Avg attendance" value={squad.some((p) => p.sessions) ? `${avgAtt}%` : '—'} />
+              <StatCard label="Matches played" value={matchCount} />
+              <StatCard label="Teams" value={teams.length} />
+            </div>
+          </>
+        );
+      })()}
 
       <CoachCalendar teamIds={teams.map((t) => t.id)} />
 
