@@ -105,11 +105,12 @@ export default function Leaderboard() {
   return (
     <AppShell role={role} active="Leaderboard" title="Leaderboard">
       <style>{`.app .content{background:#000 !important;}`}</style>
+      <style>{`@keyframes pageIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{ color: C.text }}>
 
         {view === 'main' ? (<>
         {/* Player of the Week hero */}
-        <div onClick={() => setView('fame')} style={{ ...card, background: `radial-gradient(120% 140% at 85% 0%, rgba(228,3,46,.55), rgba(228,3,46,.10) 45%, ${C.card} 75%)`, border: `1px solid ${C.border}`, padding: 22, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+        <div onClick={() => setView('fame')} style={{ ...card, background: `radial-gradient(120% 140% at 85% 0%, rgba(228,3,46,.55), rgba(228,3,46,.10) 45%, ${C.card} 75%)`, border: `1px solid ${C.border}`, padding: 22, position: 'relative', overflow: 'hidden', cursor: 'pointer', animation: 'pageIn .5s cubic-bezier(.2,.7,.2,1) both' }}>
           <RedDust />
           <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ color: C.red, fontWeight: 800, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase' }}>♛ Player of the Week</div>
@@ -139,7 +140,7 @@ export default function Leaderboard() {
         </div>
 
         {/* Man of the Match */}
-        <div style={card}>
+        <div style={{ ...card, animation: 'pageIn .5s cubic-bezier(.2,.7,.2,1) both', animationDelay: '.08s' }}>
           <H icon="★" title="Man of the Match — Recent Matches" />
           {motm.length === 0 ? <p style={{ color: C.muted, margin: 0 }}>No fixtures yet.</p> : motm.map((m, i) => (
             <div key={i} style={{ ...rowBox, borderBottom: i === motm.length - 1 ? 'none' : rowBox.borderBottom }}>
@@ -150,14 +151,14 @@ export default function Leaderboard() {
         </div>
 
         {/* Category leaders */}
-        <div style={card}>
+        <div style={{ ...card, animation: 'pageIn .5s cubic-bezier(.2,.7,.2,1) both', animationDelay: '.16s' }}>
           <H icon="🏆" title="Category Leaders" />
           <p style={{ color: C.muted, fontSize: 12, margin: '-4px 0 12px' }}>Swipe a category left (or tap) to reveal its top 5.</p>
           <CategoryLeaders items={tileItems} stats={stats} C={C} />
         </div>
 
         {/* Stakeboard (stat leaderboard) */}
-        <div style={card}>
+        <div style={{ ...card, animation: 'pageIn .5s cubic-bezier(.2,.7,.2,1) both', animationDelay: '.24s' }}>
           <H icon="🏆" title="Stakeboard" right={role === 'player' ? <span style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '3px 10px', fontSize: 12, color: C.muted }}>Top 5</span> : null} />
           <div style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>Category</div>
           <select value={metricKey} onChange={(e) => setMetricKey(e.target.value)}
@@ -174,7 +175,7 @@ export default function Leaderboard() {
         </div>
 
         {/* Season leaderboard */}
-        <div style={{ ...card, marginBottom: 0 }}>
+        <div style={{ ...card, marginBottom: 0, animation: 'pageIn .5s cubic-bezier(.2,.7,.2,1) both', animationDelay: '.32s' }}>
           <H icon="📊" title="Season Leaderboard" right={role === 'player' ? <span style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '3px 10px', fontSize: 12, color: C.muted }}>Top 5</span> : null} />
           {season.length === 0 ? <p style={{ color: C.muted, margin: 0 }}>Rankings appear once training and matches are logged.</p> : (
             <SeasonBoard season={season} statsById={statsById} C={C} />
