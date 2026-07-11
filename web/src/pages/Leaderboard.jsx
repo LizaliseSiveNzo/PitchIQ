@@ -8,6 +8,7 @@ import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import RedDust from '../components/RedDust.jsx';
+import CategoryLeaders from '../components/CategoryLeaders.jsx';
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 const pct = (v) => `${Math.round(v)}%`;
@@ -73,6 +74,7 @@ export default function Leaderboard() {
   const metric = METRICS.find((m) => m.key === metricKey);
   const ranked = [...stats].filter((r) => Number(r[metricKey]) > 0).sort((a, b) => Number(b[metricKey]) - Number(a[metricKey]));
   const topFor = (key) => { const r = [...stats].filter((x) => Number(x[key]) > 0).sort((a, b) => Number(b[key]) - Number(a[key])); return r[0]; };
+  const tileItems = TILES.map((t) => { const m = METRICS.find((x) => x.key === t.key); return { ...t, fmt: m.fmt, unit: m.unit }; });
 
   const potw = hl?.player_of_week;
   const motm = hl?.motm || [];
@@ -132,22 +134,8 @@ export default function Leaderboard() {
         {/* Category leaders */}
         <div style={card}>
           <H icon="🏆" title="Category Leaders" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-            {TILES.map((t) => {
-              const m = METRICS.find((x) => x.key === t.key); const top = topFor(t.key);
-              return (
-                <div key={t.key} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <span style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(228,3,46,.12)', color: C.red, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{t.icon}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ color: C.muted, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', fontWeight: 700 }}>{t.label}</div>
-                    {top ? <><div style={{ fontWeight: 700, fontSize: 16 }}>{top.name}</div>
-                      <div style={{ color: C.red, fontWeight: 700, fontSize: 13 }}>{m.fmt(top[t.key])}{m.unit ? ` ${m.unit}` : ''}</div></>
-                      : <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>No data yet</div>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <p style={{ color: C.muted, fontSize: 12, margin: '-4px 0 12px' }}>Swipe a category left (or tap) to reveal its top 5.</p>
+          <CategoryLeaders items={tileItems} stats={stats} C={C} />
         </div>
 
         {/* Stakeboard (stat leaderboard) */}
