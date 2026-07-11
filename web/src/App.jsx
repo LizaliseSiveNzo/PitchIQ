@@ -16,6 +16,7 @@ import AdminActivity from './pages/AdminActivity.jsx';
 import AdminStats from './pages/AdminStats.jsx';
 import AdminCoaches from './pages/AdminCoaches.jsx';
 import AdminBroadcast from './pages/AdminBroadcast.jsx';
+import AdminPlayerDetail from './pages/AdminPlayerDetail.jsx';
 import CoachDashboard from './pages/CoachDashboard.jsx';
 import CoachLogTraining from './pages/CoachLogTraining.jsx';
 import CoachLogMatch from './pages/CoachLogMatch.jsx';
@@ -46,6 +47,7 @@ export default function App() {
       <Route path="/admin/coaches"  element={<ProtectedRoute roles={['admin']}><AdminCoaches /></ProtectedRoute>} />
       <Route path="/admin/activity" element={<ProtectedRoute roles={['admin']}><AdminActivity /></ProtectedRoute>} />
       <Route path="/admin/stats"    element={<ProtectedRoute roles={['admin']}><AdminStats /></ProtectedRoute>} />
+      <Route path="/admin/player/:id" element={<ProtectedRoute roles={['admin']}><AdminPlayerDetail /></ProtectedRoute>} />
       <Route path="/admin/broadcast" element={<ProtectedRoute roles={['admin']}><AdminBroadcast /></ProtectedRoute>} />
       <Route path="/admin/trials"   element={<ProtectedRoute roles={['admin']}><AdminTrials /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute roles={['admin']}><AdminSettings /></ProtectedRoute>} />

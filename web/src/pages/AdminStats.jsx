@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 
@@ -18,7 +19,7 @@ export default function AdminStats() {
           <table className="table"><thead><tr><th>Player</th><th>Team</th><th>Pos</th><th>Rank</th><th>Attend.</th><th>Games</th><th>Minutes</th><th>Avg rating</th></tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.player_id}>
-                <td>{r.name}<div className="subtle" style={{ fontSize: 11 }}>{r.email}</div></td>
+                <td><Link to={`/admin/player/${r.player_id}`} style={{ color: 'inherit' }}><span style={{ textDecoration: 'underline', fontWeight: 600 }}>{r.name}</span></Link><div className="subtle" style={{ fontSize: 11 }}>{r.email}</div></td>
                 <td>{r.team_name || '—'}</td>
                 <td>{r.play_position || '—'}</td>
                 <td><span className="badge badge-neutral">{(r.rank_level || 'Rookie').replace('_',' ')}</span></td>
