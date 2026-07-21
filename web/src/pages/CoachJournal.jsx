@@ -39,6 +39,7 @@ export default function CoachJournal() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [editId, setEditId] = useState('');
+  const [onCal, setOnCal] = useState(true);
 
   useEffect(() => { if (session?.demo) return; (async () => {
     const t = await myTeams(profile.id); setTeams(t); if (t[0]) setTeamId(t[0].id);
@@ -60,7 +61,7 @@ export default function CoachJournal() {
           .select('id,opponent,date,result,competition,reflection')
           .eq('team_id', tid).order('date', { ascending: false }).limit(80),
         supabase.from('coach_journal_entries')
-          .select('id,entry_date,title,body,category,created_at')
+          .select('id,entry_date,title,body,category,created_at,show_on_calendar')
           .eq('team_id', tid).order('entry_date', { ascending: false }).limit(80),
       ]);
 
@@ -100,7 +101,7 @@ export default function CoachJournal() {
         ...(notes || []).map((n) => ({
           kind: 'note', id: n.id, when: n.entry_date, title: n.title,
           category: n.category, sections: n.body ? [['', n.body]] : [], standouts: [],
-          raw: n,
+          onCalendar: n.show_on_calendar, raw: n,
         })),
       ].sort((a, b) => new Date(b.when) - new Date(a.when));
 
@@ -114,7 +115,8 @@ export default function CoachJournal() {
     setBusy(true); setErr('');
     try {
       const payload = { team_id: teamId, coach_id: profile.id, title: title.trim(),
-                        body: body.trim() || null, category: cat, entry_date: date };
+                        body: body.trim() || null, category: cat, entry_date: date,
+                        show_on_calendar: onCal };
       const { error } = editId
         ? await supabase.from('coach_journal_entries').update(payload).eq('id', editId)
         : await supabase.from('coach_journal_entries').insert(payload);
@@ -125,13 +127,19 @@ export default function CoachJournal() {
 
   function resetForm() {
     setTitle(''); setBody(''); setCat('General'); setDate(new Date().toISOString().slice(0, 10));
-    setAdding(false); setEditId('');
+    setAdding(false); setEditId(''); setOnCal(true);
   }
   function startEdit(n) {
     setEditId(n.id); setTitle(n.title); setBody(n.body || '');
-    setCat(n.category); setDate(n.entry_date); setAdding(true);
+    setCat(n.category); setDate(n.entry_date); setOnCal(n.show_on_calendar !== false); setAdding(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  async function toggleCalendar(n) {
+    const next = !(n.show_on_calendar !== false);
+    await supabase.from('coach_journal_entries').update({ show_on_calendar: next }).eq('id', n.id);
+    await load(teamId);
+  }
+
   async function removeEntry(id) {
     if (!window.confirm('Delete this journal entry?')) return;
     await supabase.from('coach_journal_entries').delete().eq('id', id);
@@ -210,6 +218,10 @@ export default function CoachJournal() {
           <div className="field"><label className="label">Notes</label>
             <textarea className="textarea" rows={4} placeholder="What did you notice? What does the squad need to work on?"
               value={body} onChange={(e) => setBody(e.target.value)} /></div>
+          <label className="row" style={{ gap: 8, marginBottom: 10 }}>
+            <input type="checkbox" checked={onCal} onChange={(e) => setOnCal(e.target.checked)} />
+            <span>📅 Show on the calendar for this date</span>
+          </label>
           {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</p>}
           <div className="row" style={{ gap: 8 }}>
             <button className="btn btn-primary" disabled={busy || !title.trim()}>{busy ? 'Saving…' : (editId ? 'Save changes' : 'Add entry')}</button>
@@ -266,6 +278,7 @@ export default function CoachJournal() {
                       </div>
                       <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
                         {e.result && <span className="badge badge-neutral">🏁 {e.result}</span>}
+                        {e.kind === 'note' && e.onCalendar && <span className="badge badge-neutral" title="Showing on the calendar">📅</span>}
                         {e.category && <span className="badge" style={{ background: CAT_COLOUR[e.category], color: '#fff' }}>{e.category}</span>}
                         <span className="badge badge-neutral">{M.label}</span>
                       </div>
@@ -293,6 +306,9 @@ export default function CoachJournal() {
                       {e.link && <Link to={e.link} className="subtle" style={{ fontSize: 12 }}>Open {e.kind === 'match' ? 'match' : 'session'} →</Link>}
                       {e.kind === 'note' && (
                         <>
+                          <button type="button" className="btn btn-ghost" style={{ minHeight: 26, padding: '2px 8px' }} onClick={() => toggleCalendar(e.raw)}>
+                            {e.onCalendar ? '📅 Remove from calendar' : '📅 Add to calendar'}
+                          </button>
                           <button type="button" className="btn btn-ghost" style={{ minHeight: 26, padding: '2px 8px' }} onClick={() => startEdit(e.raw)}>✏️ Edit</button>
                           <button type="button" className="btn btn-ghost" style={{ minHeight: 26, padding: '2px 8px', color: 'var(--danger)' }} onClick={() => removeEntry(e.id)}>🗑</button>
                         </>

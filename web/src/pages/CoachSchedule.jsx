@@ -35,6 +35,12 @@ export default function CoachSchedule() {
   const [location, setLocation] = useState('');
   const [pNotes, setPNotes] = useState('');
   const [notify, setNotify] = useState(true);
+  // other-event form
+  const [eTitle, setETitle] = useState('');
+  const [eType, setEType] = useState('Meeting');
+  const [eDate, setEDate] = useState('');
+  const [eLoc, setELoc] = useState('');
+  const [eNotes, setENotes] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (session?.demo) return; (async () => {
@@ -42,21 +48,23 @@ export default function CoachSchedule() {
   })(); }, []);
   useEffect(() => { if (teamId) { loadUpcoming(); setShowPast(false); setPast([]); } }, [teamId]);
 
-  function mapItems(matches, practices) {
+  function mapItems(matches, practices, events) {
     return [
       ...(matches || []).map((m) => ({ id: 'm' + m.id, kind: 'match', rawId: m.id, type: 'Match', when: m.date, title: `vs ${m.opponent}`, where: m.venue || m.home_away })),
       ...(practices || []).map((p) => ({ id: 'p' + p.id, kind: 'practice', rawId: p.id, type: 'Practice', when: p.starts_at, title: p.notes || 'Training', where: p.location })),
+      ...(events || []).map((e) => ({ id: 'e' + e.id, kind: 'event', rawId: e.id, type: e.event_type, when: e.starts_at, title: e.title, where: e.location })),
     ];
   }
 
   async function loadUpcoming() {
     const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
     const fromIso = startToday.toISOString();
-    const [{ data: matches }, { data: practices }] = await Promise.all([
+    const [{ data: matches }, { data: practices }, { data: events }] = await Promise.all([
       supabase.from('matches').select('id,opponent,date,venue,home_away').eq('team_id', teamId).gte('date', fromIso),
       supabase.from('training_sessions').select('id,starts_at,location,notes').eq('team_id', teamId).not('starts_at', 'is', null).gte('starts_at', fromIso),
+      supabase.from('team_events').select('id,title,event_type,starts_at,location').eq('team_id', teamId).gte('starts_at', fromIso),
     ]);
-    const items = mapItems(matches, practices).sort((a, b) => new Date(a.when) - new Date(b.when));
+    const items = mapItems(matches, practices, events).sort((a, b) => new Date(a.when) - new Date(b.when));
     setUpcoming(items);
 
     const ids = items.map((i) => i.rawId);
@@ -77,26 +85,55 @@ export default function CoachSchedule() {
   async function loadPast() {
     const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
     const toIso = startToday.toISOString();
-    const [{ data: matches }, { data: practices }] = await Promise.all([
+    const [{ data: matches }, { data: practices }, { data: events }] = await Promise.all([
       supabase.from('matches').select('id,opponent,date,venue,home_away').eq('team_id', teamId).lt('date', toIso).order('date', { ascending: false }).limit(20),
       supabase.from('training_sessions').select('id,starts_at,location,notes').eq('team_id', teamId).not('starts_at', 'is', null).lt('starts_at', toIso).order('starts_at', { ascending: false }).limit(20),
+      supabase.from('team_events').select('id,title,event_type,starts_at,location').eq('team_id', teamId).lt('starts_at', toIso).order('starts_at', { ascending: false }).limit(20),
     ]);
-    setPast(mapItems(matches, practices).sort((a, b) => new Date(b.when) - new Date(a.when)));
+    setPast(mapItems(matches, practices, events).sort((a, b) => new Date(b.when) - new Date(a.when)));
     setShowPast(true);
   }
 
-  const openLog = (u) => u.kind === 'practice' ? navigate(`/coach/checkin?session=${u.rawId}`) : navigate(`/coach/lineup?match=${u.rawId}`);
+  const openLog = (u) => {
+    if (u.kind === 'event') return;                      // general events have nothing to log
+    if (u.kind === 'practice') return navigate(`/coach/checkin?session=${u.rawId}`);
+    return navigate(`/coach/lineup?match=${u.rawId}`);
+  };
 
   async function removeEvent(u, e) {
     if (e) e.stopPropagation();
-    const label = u.kind === 'match' ? 'Cancel this match? Players will be notified, it disappears from their schedule, and its lineup is deleted.' : 'Cancel this training session? Players will be notified and its attendance is removed.';
+    const label = u.kind === 'match' ? 'Cancel this match? Players will be notified, it disappears from their schedule, and its lineup is deleted.'
+      : u.kind === 'event' ? 'Cancel this event? Players will be notified.'
+      : 'Cancel this training session? Players will be notified and its attendance is removed.';
     if (!window.confirm(label)) return;
     setErr('');
     const { error } = u.kind === 'match'
       ? await supabase.rpc('delete_match', { p_id: u.rawId })
+      : u.kind === 'event'
+      ? await supabase.rpc('delete_team_event', { p_id: u.rawId })
       : await supabase.rpc('delete_training_session', { p_session_id: u.rawId });
     if (error) { setErr(error.message); return; }
     loadUpcoming(); if (showPast) loadPast();
+  }
+
+  async function addEvent(e) {
+    e.preventDefault(); setBusy(true); setErr(''); setMsg('');
+    try {
+      const { data: ev, error } = await supabase.from('team_events')
+        .insert({ team_id: teamId, coach_id: profile.id, title: eTitle.trim(), event_type: eType,
+                  starts_at: eDate, location: eLoc.trim() || null, notes: eNotes.trim() || null })
+        .select('id').single();
+      if (error) { setErr(error.message); return; }
+      if (notify) {
+        const team = teams.find((t) => t.id === teamId);
+        await supabase.rpc('notify_team', { p_team: teamId,
+          p_message: `${eType}: ${eTitle} — ${new Date(eDate).toLocaleString()}${eLoc ? ' at ' + eLoc : ''} (${team?.name || 'team'})`,
+          p_ref_type: 'event', p_ref_id: ev.id });
+      }
+      setMsg('Event added to the schedule and calendar.');
+      setETitle(''); setEDate(''); setELoc(''); setENotes('');
+      loadUpcoming();
+    } finally { setBusy(false); }
   }
 
   async function addFixture(e) {
@@ -147,7 +184,7 @@ export default function CoachSchedule() {
         </div>
         <div className="row" style={{ gap: 6 }}>
           {isToday(u.when) && <span className="badge badge-warning">Today</span>}
-          <span className={`badge ${u.type === 'Match' ? 'badge-info' : 'badge-success'}`}>{u.type}</span>
+          <span className={`badge ${u.kind === 'match' ? 'badge-info' : u.kind === 'event' ? 'badge-neutral' : 'badge-success'}`}>{u.kind === 'event' ? `📌 ${u.type}` : u.type}</span>
           {canDelete && <button type="button" className="btn btn-ghost" style={{ minHeight: 26, padding: '2px 8px', color: 'var(--danger)' }} title="Delete" onClick={(e) => removeEvent(u, e)}>🗑</button>}
         </div>
       </div>
@@ -216,6 +253,26 @@ export default function CoachSchedule() {
             <div className="field"><label className="label">Competition (optional)</label>
               <input className="input" placeholder="League / Cup / Friendly" value={competition} onChange={(e) => setCompetition(e.target.value)} /></div>
             <button className="btn btn-secondary btn-block" disabled={busy || !opponent.trim() || !fDate}>{busy ? 'Saving…' : 'Schedule fixture'}</button>
+          </form>
+
+          <form className="card" onSubmit={addEvent} style={{ gridColumn: '1 / -1' }}>
+            <h4>📌 Schedule another event</h4>
+            <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>Meetings, trials, fitness tests, socials — anything that isn’t training or a match.</p>
+            <div className="grid grid-2" style={{ gap: 10 }}>
+              <div className="field" style={{ margin: 0 }}><label className="label">Title</label>
+                <input className="input" placeholder="e.g. Parents meeting" value={eTitle} onChange={(e) => setETitle(e.target.value)} /></div>
+              <div className="field" style={{ margin: 0 }}><label className="label">Type</label>
+                <select className="select" value={eType} onChange={(e) => setEType(e.target.value)}>
+                  {['Meeting','Trial','Fitness test','Social','Tournament','Other'].map((v) => <option key={v}>{v}</option>)}
+                </select></div>
+              <div className="field" style={{ margin: 0 }}><label className="label">Date &amp; time</label>
+                <input className="input" type="datetime-local" value={eDate} onChange={(e) => setEDate(e.target.value)} /></div>
+              <div className="field" style={{ margin: 0 }}><label className="label">Location (optional)</label>
+                <input className="input" placeholder="e.g. Clubhouse" value={eLoc} onChange={(e) => setELoc(e.target.value)} /></div>
+            </div>
+            <div className="field"><label className="label">Notes (optional)</label>
+              <input className="input" placeholder="e.g. Bring boots and a water bottle" value={eNotes} onChange={(e) => setENotes(e.target.value)} /></div>
+            <button className="btn btn-primary btn-block" disabled={busy || !eTitle.trim() || !eDate}>{busy ? 'Saving…' : 'Schedule event'}</button>
           </form>
         </div>
       )}
