@@ -44,10 +44,16 @@ export function AuthProvider({ children }) {
     return { role: prof?.role };
   }
 
-  async function signUp({ name, email, password, role }) {
+  async function signUp({ name, email, password, role, consent, consentVersion, guardianName, consentPhotoMedia }) {
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { name, role } },
+      options: { data: {
+        name, role,
+        consent: !!consent,
+        consent_version: consentVersion || null,
+        guardian_name: guardianName || null,
+        consent_photo_media: !!consentPhotoMedia,
+      } },
     });
     if (error) return { error: error.message };
     return { needsConfirmation: !data.session, role };

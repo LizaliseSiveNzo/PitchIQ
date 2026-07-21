@@ -52,7 +52,7 @@ export default function CoachSquad() {
   const filtered = squad
     .filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase()))
     .filter((p) => pos === 'all' || p.position === pos)
-    .filter((p) => avail === 'all' || (avail === 'available' ? !p.unavailable : !!p.unavailable))
+    .filter((p) => avail === 'all' || (avail === 'missing' ? (!p.hasEmergency || !p.hasConsent) : avail === 'available' ? !p.unavailable : !!p.unavailable))
     .sort((a, b) => {
       if (sort === 'rate') return (b.rate ?? -1) - (a.rate ?? -1) || a.name.localeCompare(b.name);
       if (sort === 'position') return (a.position || 'zz').localeCompare(b.position || 'zz') || a.name.localeCompare(b.name);
@@ -95,6 +95,7 @@ export default function CoachSquad() {
             <option value="all">All availability</option>
             <option value="available">Available only</option>
             <option value="unavailable">Unavailable only</option>
+            <option value="missing">Missing safeguarding info</option>
           </select>
         </div>
         <div className="row between" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
@@ -137,6 +138,12 @@ export default function CoachSquad() {
                       </div>
                     </div>
                     <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                      {(!p.hasEmergency || !p.hasConsent) && (
+                        <span className="badge badge-danger"
+                          title={[!p.hasEmergency && 'No emergency contact', !p.hasConsent && 'No guardian consent recorded'].filter(Boolean).join(' · ')}>
+                          🛡️ Missing info
+                        </span>
+                      )}
                       {p.injury && <span className="badge badge-danger" title={p.injury.injury_type}>🩹 Injured</span>}
                       {p.benched && !p.injury && <span className="badge badge-warning" title={p.benchReason || ''}>Unavailable</span>}
                       <span className={`badge ${attColour(p.rate)}`}>{p.rate == null ? '— att' : `${p.rate}% att`}</span>

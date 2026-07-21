@@ -70,7 +70,8 @@ export default function PlayerInformation({ player, editable = false, onSaved })
         <div className="row between" style={{ width: '100%' }}>
           <strong>ℹ️ Player Information</strong>
           <span className="row" style={{ gap: 8 }}>
-            {missingEmergency && <span className="badge badge-warning">No emergency contact</span>}
+            {missingEmergency && <span className="badge badge-danger">No emergency contact</span>}
+            {player.consentAccepted === false && <span className="badge badge-warning">No consent on file</span>}
             <span className="subtle">{open ? '▲' : '▼'}</span>
           </span>
         </div>

@@ -182,7 +182,8 @@ function LiveCoach() {
   const avgAtt = squad.some((p) => p.rate != null)
     ? Math.round(squad.filter((p) => p.rate != null).reduce((n, p) => n + p.rate, 0) / squad.filter((p) => p.rate != null).length)
     : null;
-  const actionCount = upcoming.length + unlogged.length + unavailable.length;
+  const missingSafeguard = squad.filter((p) => !p.hasEmergency || !p.hasConsent);
+  const actionCount = upcoming.length + unlogged.length + unavailable.length + (missingSafeguard.length ? 1 : 0);
 
   return (
     <>
@@ -232,6 +233,13 @@ function LiveCoach() {
                 cta={e.kind === 'match' ? '📋 Lineup' : '✅ Attendance'}
                 onClick={() => navigate(e.kind === 'match' ? `/coach/lineup?match=${e.id}` : `/coach/checkin?session=${e.id}`)} />
             ))}
+
+            {missingSafeguard.length > 0 && (
+              <ActionRow icon="🛡️" tone="var(--danger)" label="Safeguarding"
+                title={`${missingSafeguard.length} player${missingSafeguard.length === 1 ? '' : 's'} missing emergency contact or consent`}
+                meta={missingSafeguard.slice(0, 4).map((p) => p.name.split(' ')[0]).join(', ') + (missingSafeguard.length > 4 ? '…' : '')}
+                cta="Review" to="/coach/squad" />
+            )}
 
             {unavailable.map((p) => (
               <ActionRow key={'b' + p.id} icon="🩹" tone={p.injury ? 'var(--danger)' : '#f59e0b'} label={p.injury ? 'Player injured' : 'Player unavailable'}

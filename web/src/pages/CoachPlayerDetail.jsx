@@ -53,7 +53,7 @@ export default function CoachPlayerDetail() {
 
   async function load() {
     const { data: player } = await supabase.from('players')
-      .select('id,position,rank_level,benched,bench_reason,child_code,team_id,date_of_birth,strong_foot,shirt_number,guardian_name,guardian_phone,guardian_email,emergency_contact,emergency_phone,allergies,users(name)')
+      .select('id,position,rank_level,benched,bench_reason,child_code,team_id,date_of_birth,strong_foot,shirt_number,guardian_name,guardian_phone,guardian_email,emergency_contact,emergency_phone,allergies,users(name,consent_accepted_at)')
       .eq('id', id).single();
     if (!player) { setP(false); return; }
     setP(player);
@@ -177,7 +177,7 @@ export default function CoachPlayerDetail() {
 
       {tab === 'Overview' && (
         <>
-          <PlayerInformation player={p} editable onSaved={load} />
+          <PlayerInformation player={{ ...p, consentAccepted: !!p.users?.consent_accepted_at }} editable onSaved={load} />
           <PlayerCard playerId={id} />
           <div className="card" style={{ marginTop: 16 }}>
             <h4 style={{ marginTop: 0 }}>🪑 Availability</h4>

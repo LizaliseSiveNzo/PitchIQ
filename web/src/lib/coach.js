@@ -12,10 +12,12 @@ export async function myTeams(coachId) {
 
 export async function teamPlayers(teamId) {
   const { data } = await supabase.from('players')
-    .select('id,position,rank_level,child_code,user_id,benched,bench_reason,shirt_number,users(name)').eq('team_id', teamId);
+    .select('id,position,rank_level,child_code,user_id,benched,bench_reason,shirt_number,emergency_contact,emergency_phone,users(name,consent_accepted_at)').eq('team_id', teamId);
   return (data || []).map((p) => ({
     id: p.id, name: p.users?.name || 'Player', position: p.position, rank: p.rank_level,
     code: p.child_code, benched: p.benched, benchReason: p.bench_reason, shirt: p.shirt_number,
+    hasEmergency: !!(p.emergency_contact || p.emergency_phone),
+    hasConsent: !!p.users?.consent_accepted_at,
   }));
 }
 

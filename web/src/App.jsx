@@ -7,6 +7,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
+import Privacy from './pages/Privacy.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminTeams from './pages/AdminTeams.jsx';
 import AdminPlayers from './pages/AdminPlayers.jsx';
@@ -42,6 +43,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/trial/:qrToken" element={<TrialRegister />} />
 
       <Route path="/admin"          element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
