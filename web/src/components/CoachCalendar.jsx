@@ -105,6 +105,16 @@ export default function CoachCalendar({ teamIds, mode = 'coach' }) {
 
   const dot = (bg) => <span style={{ width: 6, height: 6, borderRadius: '50%', background: bg }} />;
 
+  // Ring around a date: one solid colour for a single event type, split into
+  // halves / thirds / quarters as more types land on the same day.
+  const ringFor = (types) => {
+    const cols = types.map((t) => TYPES[t]?.colour || 'var(--border)');
+    if (cols.length === 1) return cols[0];
+    const step = 360 / cols.length;
+    const stops = cols.map((c, i) => `${c} ${i * step}deg ${(i + 1) * step}deg`).join(', ');
+    return `conic-gradient(${stops})`;
+  };
+
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="row between" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
@@ -142,15 +152,22 @@ export default function CoachCalendar({ teamIds, mode = 'coach' }) {
           const isToday = sameDay(new Date(year, month, d), today);
           const isSel = selected && selected.getDate() === d;
           const types = [...new Set(evs.map((e) => e.type))];
+          const label = types.map((t) => TYPES[t]?.label || t).join(', ');
           return (
             <button key={d} type="button" onClick={() => setSelected(evs.length ? new Date(year, month, d) : null)}
+              title={evs.length ? `${evs.length} event${evs.length === 1 ? '' : 's'}: ${label}` : undefined}
               style={{ aspectRatio: '1', border: isSel ? '2px solid var(--green-600)' : '1px solid var(--border)', borderRadius: 8,
                 background: isToday ? 'var(--surface-2)' : 'var(--surface)', cursor: evs.length ? 'pointer' : 'default',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: 0 }}>
-              <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500 }}>{d}</span>
-              <span className="row" style={{ gap: 3, height: 6 }}>
-                {types.slice(0, 3).map((t) => <span key={t}>{dot(TYPES[t]?.colour || 'var(--border)')}</span>)}
-              </span>
+                position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              {types.length > 0 && (
+                <>
+                  {/* colour ring — split by event type */}
+                  <span aria-hidden style={{ position: 'absolute', inset: '9%', borderRadius: '50%', background: ringFor(types) }} />
+                  {/* white centre so the date stays readable */}
+                  <span aria-hidden style={{ position: 'absolute', inset: '30%', borderRadius: '50%', background: 'var(--surface)' }} />
+                </>
+              )}
+              <span style={{ position: 'relative', fontSize: 12, fontWeight: isToday ? 800 : types.length ? 700 : 500 }}>{d}</span>
             </button>
           );
         })}
