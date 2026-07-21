@@ -14,10 +14,15 @@ import PlayerUploads from '../components/PlayerUploads.jsx';
 import PlayerCard from '../components/PlayerCard.jsx';
 import AttributeEditor from '../components/AttributeEditor.jsx';
 import PlayerInformation from '../components/PlayerInformation.jsx';
+import DevelopmentPlan from '../components/DevelopmentPlan.jsx';
+import CoachNotes from '../components/CoachNotes.jsx';
+import PlayerTrainingLog from '../components/PlayerTrainingLog.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+const TABS = ['Overview', 'Development', 'Matches', 'Training', 'Notes', 'Documents', 'Medical'];
+const TAB_KEY = 'pitchiq.playerTab';
 
 export default function CoachPlayerDetail() {
   const { id } = useParams();
@@ -26,7 +31,6 @@ export default function CoachPlayerDetail() {
   const [stats, setStats] = useState({ att: null, avg: null, minutes: 0, goals: 0, assists: 0 });
   const [notes, setNotes] = useState([]);
   const [mealPlan, setMealPlan] = useState('');
-  const [newNote, setNewNote] = useState('');
   const [newMeal, setNewMeal] = useState('');
   const [benchReason, setBenchReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,8 +39,10 @@ export default function CoachPlayerDetail() {
   const [sending, setSending] = useState(false);
   const [sendMsg, setSendMsg] = useState('');
   const [uploadsKey, setUploadsKey] = useState(0);
+  const [tab, setTab] = useState(() => sessionStorage.getItem(TAB_KEY) || 'Overview');
 
-  useEffect(() => { if (!session?.demo) load(); }, [id]);
+  useEffect(() => { if (!session?.demo) load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { sessionStorage.setItem(TAB_KEY, tab); }, [tab]);
 
   async function load() {
     const { data: player } = await supabase.from('players')
@@ -64,28 +70,27 @@ export default function CoachPlayerDetail() {
     });
 
     const { data: ns } = await supabase.from('coach_player_notes')
-      .select('id,note,diet_plan,created_at').eq('player_id', id)
-      .order('created_at', { ascending: false }).limit(30);
+      .select('id,note,diet_plan,tag,created_at').eq('player_id', id)
+      .order('created_at', { ascending: false }).limit(60);
     setNotes((ns || []).filter((n) => n.note));
     const latestMeal = (ns || []).find((n) => n.diet_plan);
     setMealPlan(latestMeal?.diet_plan || '');
     setNewMeal(latestMeal?.diet_plan || '');
   }
 
-  async function addNote(e) {
-    e.preventDefault(); if (!newNote.trim()) return;
+  async function addNote(text, tag) {
     setBusy(true);
     try {
-      await supabase.from('coach_player_notes').insert({ coach_id: profile.id, player_id: id, note: newNote.trim() });
-      setNewNote(''); setMsg('Note saved — the player can see it on their profile.'); load();
+      await supabase.from('coach_player_notes').insert({ coach_id: profile.id, player_id: id, note: text, tag });
+      setMsg('Note saved — the player can see it on their profile.'); await load();
     } finally { setBusy(false); }
   }
 
   async function saveMeal(e) {
     e.preventDefault(); setBusy(true);
     try {
-      await supabase.from('coach_player_notes').insert({ coach_id: profile.id, player_id: id, diet_plan: newMeal.trim() || null });
-      setMsg('Meal plan updated.'); load();
+      await supabase.from('coach_player_notes').insert({ coach_id: profile.id, player_id: id, diet_plan: newMeal.trim() || null, tag: 'Physical' });
+      setMsg('Meal plan updated.'); await load();
     } finally { setBusy(false); }
   }
 
@@ -113,32 +118,33 @@ export default function CoachPlayerDetail() {
         benched: !p.benched,
         bench_reason: !p.benched ? (benchReason.trim() || null) : null,
       }).eq('id', id);
-      load();
+      await load();
     } finally { setBusy(false); }
   }
 
-  if (session?.demo) return <AppShell role="coach" active="Dashboard" title="Player"><div className="card">Demo mode — sign in as a real coach to manage players.</div></AppShell>;
-  if (p === null) return <AppShell role="coach" active="Dashboard" title="Player"><div className="card">Loading…</div></AppShell>;
-  if (p === false) return <AppShell role="coach" active="Dashboard" title="Player"><div className="card">Player not found (or not on your team). <Link to="/coach">Back to squad</Link></div></AppShell>;
+  if (session?.demo) return <AppShell role="coach" active="Squad" title="Player"><div className="card">Demo mode — sign in as a real coach to manage players.</div></AppShell>;
+  if (p === null) return <AppShell role="coach" active="Squad" title="Player"><div className="card">Loading…</div></AppShell>;
+  if (p === false) return <AppShell role="coach" active="Squad" title="Player"><div className="card">Player not found (or not on your team). <Link to="/coach/squad">Back to squad</Link></div></AppShell>;
 
   const name = p.users?.name || 'Player';
-  return (
-    <AppShell role="coach" active="Dashboard" title={name}>
-      <div style={{ marginBottom: 12 }}><Link to="/coach" className="subtle">← Back to squad</Link></div>
 
+  return (
+    <AppShell role="coach" active="Squad" title={name}>
+      <div style={{ marginBottom: 12 }}><Link to="/coach/squad" className="subtle">← Back to squad</Link></div>
+
+      {/* ---- Header + summary card: always visible above the tabs ---- */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div className="row">
             <span className="avatar" style={{ width: 52, height: 52, fontSize: 16 }}>{initials(name)}</span>
             <div>
               <h3 style={{ margin: 0 }}>{name}</h3>
-              <div className="subtle">{p.position || '—'} · Child code: <strong>{p.child_code || '—'}</strong></div>
+              <div className="subtle">{p.position || '—'}{p.shirt_number != null ? ` · #${p.shirt_number}` : ''} · Child code: <strong>{p.child_code || '—'}</strong></div>
             </div>
           </div>
           <RankBadge level={p.rank_level || 'Rookie'} />
         </div>
         {p.benched && <div className="badge badge-warning" style={{ marginTop: 12 }}>Unavailable{p.bench_reason ? ` — ${p.bench_reason}` : ''}</div>}
-        {/* Quick summary — snapshot of the player at a glance */}
         <div className="grid grid-3" style={{ marginTop: 16, gap: 10 }}>
           <StatCard label="Attendance" value={stats.att == null ? '—' : `${stats.att}%`} />
           <StatCard label="Avg rating" value={stats.avg ?? '—'} />
@@ -150,70 +156,87 @@ export default function CoachPlayerDetail() {
         {msg && <p style={{ color: 'var(--green-700)', fontSize: 13, margin: '12px 0 0' }}>{msg}</p>}
       </div>
 
-      <PlayerInformation player={p} editable onSaved={load} />
+      {/* ---- Tabs ---- */}
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: 4 }}>
+        <div className="segmented" style={{ display: 'inline-flex', minWidth: 'max-content' }}>
+          {TABS.map((t) => (
+            <button key={t} type="button" aria-selected={tab === t} onClick={() => setTab(t)}>{t}</button>
+          ))}
+        </div>
+      </div>
 
-      <div className="grid grid-2" style={{ alignItems: 'start' }}>
-        <div className="stack" style={{ gap: 16 }}>
-          <form className="card" onSubmit={addNote}>
-            <h4>📝 Add a note</h4>
-            <p className="subtle" style={{ fontSize: 13 }}>Visible to the player (and their parents on the same login).</p>
-            <textarea className="input" rows={3} placeholder="e.g. Great pressing today. Work on first touch — wall passes 10 min/day."
-              value={newNote} onChange={(e) => setNewNote(e.target.value)} />
-            <button className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={busy || !newNote.trim()}>Save note</button>
-          </form>
-
-          <form className="card" onSubmit={saveMeal}>
-            <h4>🥗 Meal plan</h4>
-            <textarea className="input" rows={5} placeholder={'e.g.\nBreakfast: oats + banana\nPre-training: fruit + water\nDinner: chicken, rice, veg'}
-              value={newMeal} onChange={(e) => setNewMeal(e.target.value)} />
-            <button className="btn btn-secondary btn-block" style={{ marginTop: 10 }} disabled={busy || newMeal.trim() === mealPlan.trim()}>Update meal plan</button>
-          </form>
-
-          <div className="card">
-            <h4>🪑 Bench</h4>
+      {tab === 'Overview' && (
+        <>
+          <PlayerInformation player={p} editable onSaved={load} />
+          <PlayerCard playerId={id} />
+          <div className="card" style={{ marginTop: 16 }}>
+            <h4 style={{ marginTop: 0 }}>🪑 Availability</h4>
             {!p.benched && (
               <div className="field"><label className="label">Reason (shown to the family)</label>
                 <input className="input" placeholder="e.g. Resting a knock — back next week" value={benchReason} onChange={(e) => setBenchReason(e.target.value)} /></div>
             )}
             <button className="btn btn-ghost btn-block" onClick={toggleBench} disabled={busy} type="button">
-              {p.benched ? 'Return to squad' : 'Bench player'}
+              {p.benched ? 'Return to squad' : 'Mark unavailable'}
             </button>
           </div>
-        </div>
+        </>
+      )}
 
-        <div className="card">
-          <div className="section-header"><h4 style={{ margin: 0 }}>Note history</h4><span className="badge badge-neutral">{notes.length}</span></div>
-          {notes.length === 0 ? <p className="subtle">No notes yet.</p> : (
-            <div className="stack" style={{ gap: 12 }}>
-              {notes.map((n) => (
-                <div key={n.id} style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-                  <p style={{ margin: 0 }}>{n.note}</p>
-                  <div className="subtle" style={{ fontSize: 12, marginTop: 4 }}>{new Date(n.created_at).toLocaleString()}</div>
-                </div>
-              ))}
+      {tab === 'Development' && (
+        <>
+          <DevelopmentPlan playerId={id} coachId={profile?.id} canEdit />
+          <AttributeEditor playerId={id} />
+        </>
+      )}
+
+      {tab === 'Matches' && <MatchLog playerId={id} />}
+
+      {tab === 'Training' && <PlayerTrainingLog playerId={id} teamId={p.team_id} />}
+
+      {tab === 'Notes' && (
+        <>
+          <CoachNotes notes={notes} onAdd={addNote} busy={busy} />
+          <form className="card" style={{ marginTop: 16 }} onSubmit={saveMeal}>
+            <h4 style={{ marginTop: 0 }}>🥗 Meal plan</h4>
+            <textarea className="textarea" rows={5} placeholder={'e.g.\nBreakfast: oats + banana\nPre-training: fruit + water\nDinner: chicken, rice, veg'}
+              value={newMeal} onChange={(e) => setNewMeal(e.target.value)} />
+            <button className="btn btn-secondary btn-block" style={{ marginTop: 10 }} disabled={busy || newMeal.trim() === mealPlan.trim()}>Update meal plan</button>
+          </form>
+        </>
+      )}
+
+      {tab === 'Documents' && (
+        <>
+          <form className="card" onSubmit={sendDoc}>
+            <h4 style={{ marginTop: 0 }}>📎 Send a document, photo or video to {name.split(' ')[0]}</h4>
+            <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>Documents, images and videos (up to 200MB) — uploads straight to the player’s profile and notifies them.</p>
+            <input key={uploadsKey} className="input" type="file" accept="image/*,application/pdf,video/*" onChange={(e) => setDoc(e.target.files?.[0] || null)} />
+            {doc && <p className="subtle" style={{ fontSize: 12, margin: '4px 0 0' }}>{doc.name} · {(doc.size / 1024 / 1024).toFixed(1)}MB</p>}
+            {sendMsg && <p style={{ color: 'var(--green-700)', fontSize: 13, margin: '8px 0 0' }}>{sendMsg}</p>}
+            <button className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={sending || !doc}>{sending ? 'Sending…' : 'Send to player'}</button>
+          </form>
+          <PlayerUploads key={uploadsKey} playerId={id} canUpload={false} />
+        </>
+      )}
+
+      {tab === 'Medical' && (
+        <>
+          {(p.allergies || p.emergency_contact) && (
+            <div className="card" style={{ borderLeft: '4px solid var(--danger)' }}>
+              <h4 style={{ marginTop: 0 }}>🚑 Emergency information</h4>
+              <div className="row between" style={{ borderBottom: '1px solid var(--border)', padding: '5px 0' }}>
+                <span className="subtle" style={{ fontSize: 13 }}>Emergency contact</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{p.emergency_contact || '—'}{p.emergency_phone ? ` · ${p.emergency_phone}` : ''}</span>
+              </div>
+              <div className="row between" style={{ padding: '5px 0' }}>
+                <span className="subtle" style={{ fontSize: 13 }}>Allergies / medical</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{p.allergies || '—'}</span>
+              </div>
             </div>
           )}
-        </div>
-      </div>
-
-      <MatchLog playerId={id} />
-
-      <PlayerCard playerId={id} />
-
-      <AttributeEditor playerId={id} />
-
-      <form className="card" style={{ marginTop: 18 }} onSubmit={sendDoc}>
-        <h4 style={{ marginTop: 0 }}>📎 Send a document, photo or video to {name.split(' ')[0]}</h4>
-        <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>Documents, images and videos (up to 200MB) — uploads straight to the player’s profile and notifies them.</p>
-        <input key={uploadsKey} className="input" type="file" accept="image/*,application/pdf,video/*" onChange={(e) => setDoc(e.target.files?.[0] || null)} />
-        {doc && <p className="subtle" style={{ fontSize: 12, margin: '4px 0 0' }}>{doc.name} · {(doc.size / 1024 / 1024).toFixed(1)}MB</p>}
-        {sendMsg && <p style={{ color: 'var(--green-700)', fontSize: 13, margin: '8px 0 0' }}>{sendMsg}</p>}
-        <button className="btn btn-primary btn-block" style={{ marginTop: 10 }} disabled={sending || !doc}>{sending ? 'Sending…' : 'Send to player'}</button>
-      </form>
-
-      <PlayerUploads key={uploadsKey} playerId={id} canUpload={false} />
-
-      <InjuryThread playerId={id} />
+          <InjuryThread playerId={id} />
+        </>
+      )}
     </AppShell>
   );
 }

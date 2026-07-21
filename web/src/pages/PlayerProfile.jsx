@@ -9,6 +9,8 @@ import RankBadge from '../components/RankBadge.jsx';
 import StatCard from '../components/StatCard.jsx';
 import InjuryThread from '../components/InjuryThread.jsx';
 import MatchLog from '../components/MatchLog.jsx';
+import DevelopmentPlan from '../components/DevelopmentPlan.jsx';
+import { tagColour } from '../lib/noteTags.js';
 import PlayerUploads from '../components/PlayerUploads.jsx';
 import PlayerCard from '../components/PlayerCard.jsx';
 import CoachCalendar from '../components/CoachCalendar.jsx';
@@ -30,7 +32,7 @@ const DEMO_MEAL = 'Breakfast: oats + banana\nPre-training: fruit + water\nDinner
 const DEMO_SUMMARY = "Thabo's pace on the wing is creating real chances — three assists this month. Focus area: tracking back on defence. Home tip: 10 minutes of shuttle runs, 3× a week.";
 
 export default function PlayerProfile() {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const [ov, setOv] = useState(session?.demo ? DEMO : null);
   const [loading, setLoading] = useState(!session?.demo);
 
@@ -41,13 +43,16 @@ export default function PlayerProfile() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiErr, setAiErr] = useState('');
   const [code, setCode] = useState(session?.demo ? 'PIQ-DEMO' : '');
+  const [myPlayerId, setMyPlayerId] = useState('');
 
   useEffect(() => {
     if (session?.demo) return;
     supabase.rpc('my_player_overview').then(({ data }) => { setOv(data); setLoading(false); });
     supabase.rpc('my_player_code').then(({ data }) => { setCode(data?.[0]?.child_code || ''); });
+    if (profile?.id) supabase.from('players').select('id').eq('user_id', profile.id).maybeSingle()
+      .then(({ data }) => setMyPlayerId(data?.id || ''));
     supabase.from('coach_player_notes')
-      .select('id,note,diet_plan,created_at')
+      .select('id,note,diet_plan,tag,created_at')
       .order('created_at', { ascending: false }).limit(30)
       .then(({ data }) => {
         setNotes((data || []).filter((n) => n.note));
@@ -147,11 +152,16 @@ export default function PlayerProfile() {
               ? <p className="subtle" style={{ margin: '10px 0 0' }}>No notes from your coach yet.</p>
               : notes.map((n) => (
                 <div key={n.id} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <div className="row between" style={{ marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+                    <span className="badge" style={{ background: tagColour(n.tag || 'General'), color: '#fff' }}>{n.tag || 'General'}</span>
+                    <span className="subtle" style={{ fontSize: 12 }}>{new Date(n.created_at).toLocaleDateString()}</span>
+                  </div>
                   <p style={{ margin: 0 }}>{n.note}</p>
-                  <div className="subtle" style={{ fontSize: 12, marginTop: 4 }}>{new Date(n.created_at).toLocaleDateString()}</div>
                 </div>
               ))}
           </div>
+
+          {myPlayerId && <DevelopmentPlan playerId={myPlayerId} canEdit={false} />}
 
           <MatchLog />
 
