@@ -10,6 +10,7 @@ import StatCard from '../components/StatCard.jsx';
 import InjuryThread from '../components/InjuryThread.jsx';
 import MatchLog from '../components/MatchLog.jsx';
 import DevelopmentPlan from '../components/DevelopmentPlan.jsx';
+import AttributeProgress from '../components/AttributeProgress.jsx';
 import { tagColour } from '../lib/noteTags.js';
 import PlayerUploads from '../components/PlayerUploads.jsx';
 import PlayerCard from '../components/PlayerCard.jsx';
@@ -162,6 +163,8 @@ export default function PlayerProfile() {
           </div>
 
           {myPlayerId && <DevelopmentPlan playerId={myPlayerId} canEdit={false} />}
+
+          {myPlayerId && <AttributeProgress playerId={myPlayerId} />}
 
           <MatchLog />
 

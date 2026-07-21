@@ -16,10 +16,13 @@ import PlayerCard from '../components/PlayerCard.jsx';
 import AttributeEditor from '../components/AttributeEditor.jsx';
 import PlayerInformation from '../components/PlayerInformation.jsx';
 import DevelopmentPlan from '../components/DevelopmentPlan.jsx';
+import AttributeProgress from '../components/AttributeProgress.jsx';
+import InsightCards from '../components/InsightCards.jsx';
 import CoachNotes from '../components/CoachNotes.jsx';
 import PlayerTrainingLog from '../components/PlayerTrainingLog.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { playerInsights } from '../lib/insights.js';
 
 const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 const TABS = ['Overview', 'Development', 'Matches', 'Training', 'Notes', 'Documents', 'Medical'];
@@ -42,6 +45,8 @@ export default function CoachPlayerDetail() {
   const [uploadsKey, setUploadsKey] = useState(0);
   const [tab, setTab] = useState(() => sessionStorage.getItem(TAB_KEY) || 'Overview');
   const [injured, setInjured] = useState(false);
+  const [insights, setInsights] = useState([]);
+  const [insightsBusy, setInsightsBusy] = useState(false);
 
   useEffect(() => { if (!session?.demo) load(); /* eslint-disable-next-line */ }, [id]);
   useEffect(() => { sessionStorage.setItem(TAB_KEY, tab); }, [tab]);
@@ -70,6 +75,9 @@ export default function CoachPlayerDetail() {
       goals: (ms || []).reduce((n, x) => n + (x.goals || 0), 0),
       assists: (ms || []).reduce((n, x) => n + (x.assists || 0), 0),
     });
+
+    setInsightsBusy(true);
+    playerInsights(id, player.team_id).then((r) => { setInsights(r); setInsightsBusy(false); });
 
     const { data: ns } = await supabase.from('coach_player_notes')
       .select('id,note,diet_plan,tag,created_at').eq('player_id', id)
@@ -186,7 +194,12 @@ export default function CoachPlayerDetail() {
 
       {tab === 'Development' && (
         <>
+          <div className="card">
+            <div className="section-header"><h4 style={{ margin: 0 }}>💡 What stands out</h4></div>
+            <InsightCards items={insights} loading={insightsBusy} empty="Not enough data yet — ratings, attendance and match stats will build this up." />
+          </div>
           <DevelopmentPlan playerId={id} coachId={profile?.id} canEdit />
+          <AttributeProgress playerId={id} />
           <AttributeEditor playerId={id} />
         </>
       )}
