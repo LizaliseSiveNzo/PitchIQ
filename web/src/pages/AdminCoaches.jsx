@@ -7,14 +7,44 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../components/AppShell.jsx';
 import { supabase } from '../lib/supabaseClient.js';
-
-const initials = (n = '') => n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+import { initials } from '../lib/format.js';
 
 export default function AdminCoaches() {
   const [rows, setRows] = useState([]);
-  useEffect(() => { supabase.rpc('admin_coaches').then(({ data }) => setRows(data || [])); }, []);
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(''); const [err, setErr] = useState('');
+
+  function load() { supabase.rpc('admin_coaches').then(({ data }) => setRows(data || [])); }
+  useEffect(() => { load(); }, []);
+
+  async function promote(e) {
+    e.preventDefault(); setBusy(true); setMsg(''); setErr('');
+    try {
+      const { data, error } = await supabase.rpc('admin_set_role_by_email', { p_email: email, p_role: 'coach' });
+      if (error) { setErr(error.message); return; }
+      if (!data?.ok) { setErr(data?.error || 'Could not grant the coach role.'); return; }
+      setMsg(`${data.name || email} is now a coach.`); setEmail(''); load();
+    } finally { setBusy(false); }
+  }
+
   return (
     <AppShell role="admin" active="Coaches" title="Coaches">
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-header"><h4 style={{ margin: 0 }}>Grant coach access</h4></div>
+        <p className="subtle" style={{ fontSize: 13, marginTop: 0 }}>
+          Everyone who signs up starts as a player — nobody can make themselves a coach. Ask the coach to register,
+          then enter their email here to upgrade them.
+        </p>
+        <form className="row" style={{ gap: 8, flexWrap: 'wrap' }} onSubmit={promote}>
+          <input className="input" style={{ flex: 1, minWidth: 200 }} type="email" placeholder="coach@academy.co.za"
+            value={email} onChange={(e) => setEmail(e.target.value)} />
+          <button className="btn btn-primary" disabled={busy || !email.trim()}>{busy ? 'Granting…' : 'Make coach'}</button>
+        </form>
+        {msg && <p style={{ color: 'var(--green-700)', fontSize: 13, marginTop: 10 }}>{msg}</p>}
+        {err && <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: 10 }}>{err}</p>}
+      </div>
+
       <div className="card">
         <div className="section-header"><h4 style={{ margin: 0 }}>Coach directory</h4><span className="badge badge-neutral">{rows.length}</span></div>
         {rows.length === 0 ? <p className="subtle">No coaches yet.</p> : (

@@ -10,11 +10,11 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 import { CONSENT_VERSION } from './Privacy.jsx';
 
-const ROLES = ['Coach', 'Player'];
+const ROLES = ['Player'];
 
 export default function Login() {
   const [mode, setMode] = useState('login'); // login | register
-  const [role, setRole] = useState('Coach');
+  const [role, setRole] = useState('Player');
   const [consent, setConsent] = useState(false);
   const [photoConsent, setPhotoConsent] = useState(false);
   const [guardianName, setGuardianName] = useState('');
@@ -90,12 +90,9 @@ export default function Login() {
               <p className="subtle" style={{ fontSize: 13, margin: '0 0 10px' }}>
                 👨‍👩‍👧 <strong>Parents:</strong> no separate account needed — sign in with your child's Player account to see their notes, meal plan and schedule.
               </p>
-              <label className="label">I am a…</label>
-              <div className="segmented" role="tablist">
-                {ROLES.map((r) => (
-                  <button key={r} type="button" aria-selected={role === r} onClick={() => setRole(r)}>{r}</button>
-                ))}
-              </div>
+              <p className="subtle" style={{ fontSize: 13, margin: 0 }}>
+                🏃 <strong>Coaches:</strong> coach accounts are created by your academy admin — register here first and ask them to upgrade you.
+              </p>
             </div>
           )}
 

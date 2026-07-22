@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { data: {
-        name, role,
+        name,
         consent: !!consent,
         consent_version: consentVersion || null,
         guardian_name: guardianName || null,

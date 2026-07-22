@@ -3,11 +3,9 @@ node_modules/
 .pnp
 .pnp.js
 
-# Env
-.env
-.env.local
-.env.*.local
-*.env
+# Env — .env* catches .env.production etc. (*.env alone does not)
+.env*
+!.env.example
 
 # Build output
 dist/
@@ -35,6 +33,3 @@ supabase/.temp/
 # Misc
 coverage/
 .cache/
-
-# OS/editor temp files
-.fuse_hidden*
