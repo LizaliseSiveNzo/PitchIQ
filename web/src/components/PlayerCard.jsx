@@ -107,12 +107,13 @@ export default function PlayerCard({ playerId, editablePhoto = false }) {
     try {
       if (!file.type.startsWith('image/')) { setMsg('Please choose an image.'); return; }
       if (file.size > 8 * 1024 * 1024) { setMsg('Image too large (max 8MB).'); return; }
-      const ext = (file.name.split('.').pop() || 'jpg').replace(/[^\w]/g, '').slice(0, 5);
+      const ext = (file.name.split('.').pop() || 'jpg').replace(/[^\w]/g, '').slice(0, 5).toLowerCase();
       const path = `${playerId}/avatar_${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('player-files').upload(path, file, { contentType: file.type, upsert: true });
+      const { error: upErr } = await supabase.storage.from('player-files').upload(path, file, { contentType: file.type });
       if (upErr) { setMsg(upErr.message); return; }
-      const { error } = await supabase.from('players').update({ photo_url: path }).eq('id', playerId);
+      const { data, error } = await supabase.rpc('set_my_photo', { p_path: path });
       if (error) { setMsg(error.message); return; }
+      if (!data?.ok) { setMsg(data?.error || 'Could not save the photo.'); return; }
       setMsg('Photo updated.'); await load();
     } finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   }
