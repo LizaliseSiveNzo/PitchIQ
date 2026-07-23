@@ -88,6 +88,9 @@ export default function PlayerProfile() {
   return (
     <AppShell role="player" active="My Profile" title="My Profile">
       <div className="container" style={{ maxWidth: 640, padding: 0 }}>
+        {myPlayerId && <div style={{ marginBottom: 18 }}><PlayerCard playerId={myPlayerId} editablePhoto /></div>}
+        {session?.demo && <div style={{ marginBottom: 18 }}><PlayerCard editablePhoto={false} /></div>}
+
         <div className="card">
           <div className="row between">
             <div className="row">
@@ -134,7 +137,6 @@ export default function PlayerProfile() {
             </div>
           )}
 
-          <PlayerCard />
 
           <div className="card" style={{ marginTop: 18, background: 'var(--surface-2)', border: 0 }}>
             <strong style={{ color: 'var(--green-700)', fontSize: 13, letterSpacing: '.04em', textTransform: 'uppercase' }}>
