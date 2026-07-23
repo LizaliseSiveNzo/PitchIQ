@@ -129,11 +129,23 @@ export default function PlayerCard({ playerId, editablePhoto = false }) {
 
   return (
     <div className="card" style={{ marginTop: 0 }}>
-      <div className="section-header">
-        <h4 style={{ margin: 0 }}>⚡ Player Card</h4>
-        <div className="row" style={{ gap: 8 }}>
-          {card.position && <span className="badge badge-neutral">{card.position}</span>}
-          {ov > 0 && <span className="badge badge-success" style={{ fontSize: 15, fontWeight: 800 }}>OVR {ov}</span>}
+      {/* FIFA-style top strip: position + OVR on the left, name on the right */}
+      <div className="row between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div className="row" style={{ gap: 12 }}>
+          <div style={{ textAlign: 'center', lineHeight: 1 }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--energy)' }}>{card.position || '—'}</div>
+            <div className="subtle" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Position</div>
+          </div>
+          {ov > 0 && (
+            <div style={{ textAlign: 'center', lineHeight: 1, borderLeft: '1px solid var(--border)', paddingLeft: 12 }}>
+              <div style={{ fontSize: 26, fontWeight: 800 }}>{ov}</div>
+              <div className="subtle" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Overall</div>
+            </div>
+          )}
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontWeight: 800 }}>{card.name}</div>
+          <div className="subtle" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>⚡ Player Card</div>
         </div>
       </div>
 
