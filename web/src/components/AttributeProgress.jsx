@@ -85,9 +85,9 @@ export default function AttributeProgress({ playerId }) {
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
-      <div className="section-header">
-        <h4 style={{ margin: 0 }}>📈 Development over time</h4>
-        <div className="segmented">
+      <h4 style={{ margin: '0 0 10px' }}>📈 Development over time</h4>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: 6 }}>
+        <div className="segmented" style={{ display: 'inline-flex', minWidth: 'max-content' }}>
           {RANGES.map(([k, label]) => (
             <button key={k} type="button" aria-selected={range === k} onClick={() => setRange(k)}>{label}</button>
           ))}
